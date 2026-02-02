@@ -1,0 +1,1895 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Report prodejců</title>
+  <meta name="description" content="Osobní report pro sledování výkonu prodejců" />
+  <style>
+    :root{
+      --bg0:#0f1116;
+      --bg1:#161a22;
+
+      --glass: rgba(255,255,255,.08);
+      --glass2: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.14);
+      --stroke2: rgba(255,255,255,.18);
+
+      --text:#f4f6fb;
+      --muted:#b8c0d6;
+
+      --shadow: 0 18px 55px rgba(0,0,0,.45);
+      --shadowSoft: 0 10px 30px rgba(0,0,0,.30);
+
+      --radius:18px;
+      --max:1180px;
+
+      --ok:#22c55e;
+      --bad:#ef4444;
+      --neu:#3b82f6;
+
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{box-sizing:border-box}
+    html, body{
+      max-width:100%;
+      overflow-x:hidden;
+    }
+
+    body{
+      margin:0;
+      font-family:var(--font);
+      color:var(--text);
+      background:
+        radial-gradient(1100px 520px at 20% -10%, rgba(120,170,255,.20), transparent 55%),
+        radial-gradient(900px 520px at 90% 0%, rgba(255,255,255,.14), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    .wrap{
+      max-width:var(--max);
+      margin:0 auto;
+      padding:22px 16px 54px;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+
+    h1{
+      margin:0;
+      font-size:30px;
+      letter-spacing:-.6px;
+      font-weight:760;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:420px 1fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width:1040px){
+      .grid{grid-template-columns:1fr}
+    }
+
+    .card{
+      overflow-x:hidden;
+      background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .card h2{
+      margin:0 0 10px;
+      font-size:12.5px;
+      color:var(--muted);
+      font-weight:760;
+      letter-spacing:.25px;
+      text-transform:uppercase;
+    }
+
+    .hr{height:1px;background:rgba(255,255,255,.10);margin:12px 0}
+
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid var(--stroke2);
+      background:rgba(255,255,255,.10);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      transition:transform .06s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+      text-decoration:none;
+      user-select:none;
+      font-weight:650;
+      box-shadow:var(--shadowSoft);
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,.28);
+      background:rgba(255,255,255,.14);
+    }
+    .btn:disabled{
+      cursor:not-allowed;
+      opacity:.55;
+      transform:none;
+    }
+    .btn.primary{
+      background:rgba(255,255,255,.90);
+      border-color:rgba(255,255,255,.90);
+      color:#0b1220;
+      box-shadow:0 16px 30px rgba(0,0,0,.35);
+    }
+    .btn.primary:hover{
+      background:rgba(255,255,255,.96);
+      border-color:rgba(255,255,255,.96);
+    }
+    .btn.ghost{
+      background:transparent;
+      box-shadow:none;
+    }
+    .btn.small{
+      padding:8px 10px;
+      border-radius:12px;
+      font-size:13px;
+      box-shadow:none;
+    }
+    .btn.danger{
+      border-color:rgba(239,68,68,.35);
+      color:rgba(255,255,255,.92);
+      background:rgba(239,68,68,.14);
+      box-shadow:none;
+    }
+    .btn.danger:hover{
+      border-color:rgba(239,68,68,.55);
+      background:rgba(239,68,68,.20);
+    }
+
+    .field{min-width:0}
+
+    .field{min-width:0}
+
+    .field label{
+      display:block;
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:6px;
+      font-weight:650;
+    }
+
+    /* Liquid Glass vzhled pro inputy i selecty */
+    .field input,.field select,.field textarea{
+      width:100%;
+      display:block;
+      padding:11px 12px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:16px;
+      outline:none;
+      font:inherit;
+      color:var(--text);
+      background:
+        radial-gradient(120px 80px at 20% 10%, rgba(255,255,255,.18), transparent 60%),
+        radial-gradient(160px 100px at 90% 0%, rgba(120,170,255,.16), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      box-shadow:
+        0 12px 30px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.10);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+
+      color-scheme: dark;
+      accent-color: rgba(255,255,255,.85);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .field input:focus,.field select:focus,.field textarea:focus{
+      border-color:rgba(255,255,255,.34);
+      box-shadow:
+        0 14px 34px rgba(0,0,0,.30),
+        0 0 0 3px rgba(120,170,255,.22),
+        inset 0 1px 0 rgba(255,255,255,.12);
+    }
+
+    .field input[type="date"]{
+      min-width:0;
+      max-width:100%;
+    }
+
+    .field select{
+      appearance:none;
+      -webkit-appearance:none;
+      -moz-appearance:none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(255,255,255,.75) 50%),
+        linear-gradient(135deg, rgba(255,255,255,.75) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) 54%,
+        calc(100% - 12px) 54%;
+      background-size:6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+      padding-right:34px;
+    }
+
+    .field select option{
+      background:#111522;
+      color:rgba(255,255,255,.92);
+    }
+    .field select optgroup{
+      background:#111522;
+      color:rgba(255,255,255,.72);
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.08);
+      color:rgba(255,255,255,.86);
+      font-size:12.5px;
+      box-shadow:var(--shadowSoft);
+      white-space:nowrap;
+      max-width:100%;
+      overflow:visible;
+      text-overflow:ellipsis;
+
+    .chipGroup{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:6px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);
+      box-shadow:var(--shadowSoft);
+      max-width:100%;
+      overflow:visible;
+    }
+    .chipGroup .chip{
+      box-shadow:none;
+      border-color:rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      padding:6px 10px;
+      font-size:12.5px;
+    }
+
+    .trainWrap{
+      margin-top:12px;
+      border-top:1px solid rgba(255,255,255,.10);
+      padding-top:10px;
+    }
+    .trainTitle{
+      color:rgba(255,255,255,.72);
+      font-size:12.5px;
+      font-weight:700;
+      letter-spacing:.2px;
+      margin:0 0 8px;
+    }
+    .trainList{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .trainItem{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      background:rgba(255,255,255,.05);
+      padding:10px 12px;
+      box-shadow:var(--shadowSoft);
+    }
+    .trainItem summary{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      list-style:none;
+    }
+    .trainItem summary::-webkit-details-marker{display:none}
+    .trainMeta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .trainPill{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.84);
+      font-size:12.5px;
+      white-space:nowrap;
+    }
+    .trainNote{
+      margin-top:8px;
+      color:rgba(255,255,255,.78);
+      font-size:13px;
+      line-height:1.45;
+      white-space:pre-wrap;
+    }
+    }
+
+    .reportTop{
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+
+    .avatar{
+      width:62px;
+      height:62px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.16);
+      background:
+        radial-gradient(18px 18px at 35% 30%, rgba(255,255,255,.22), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      box-shadow:var(--shadowSoft);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:visible;
+    }
+
+    .avatar svg{width:40px;height:40px;opacity:.92}
+    .avatar .ini{
+      position:absolute;
+      bottom:7px;
+      right:8px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.2px;
+      padding:4px 7px;
+      border-radius:999px;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.14);
+      color:rgba(255,255,255,.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:10px;
+    }
+    @media (max-width:740px){
+      .kpis{grid-template-columns:1fr}
+    }
+    .kpi{
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      padding:12px;
+      background:rgba(255,255,255,.07);
+      box-shadow:var(--shadowSoft);
+      min-height:92px;
+    }
+    .kpi .t{
+      color:rgba(255,255,255,.72);
+      font-size:12.5px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .kpi .v{
+      margin-top:6px;
+      font-size:22px;
+      font-weight:820;
+      letter-spacing:-.4px;
+    }
+
+    .pos{color:var(--ok)}
+    .neg{color:var(--bad)}
+    .neu{color:var(--neu)}
+
+    canvas{
+      width:100%;
+      height:340px;
+    }
+
+    details{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:10px 12px;
+      background:rgba(255,255,255,.05);
+      box-shadow:var(--shadowSoft);
+    }
+    summary{
+      cursor:pointer;
+      font-weight:650;
+      color:rgba(255,255,255,.88);
+      list-style:none;
+    }
+    summary::-webkit-details-marker{display:none}
+
+    .miniTable{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:10px;
+      font-size:13px;
+    }
+    .miniTable td{
+      padding:8px 0;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .miniTable tr:last-child td{border-bottom:none}
+    .muted{color:rgba(255,255,255,.70)}
+
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .modalBackdrop.show{display:flex}
+    .modal{
+      width:min(720px, 100%);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:22px;
+      box-shadow:0 24px 70px rgba(0,0,0,.55);
+      overflow:visible;
+      background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.07));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .modalHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+    }
+    .modalTitle{
+      font-weight:760;
+      letter-spacing:-.2px;
+    }
+    .modalBody{
+      padding:14px;
+      max-height:70vh;
+      overflow:auto;
+    }
+    .list{
+      margin:0;
+      padding:0;
+      list-style:none;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      overflow:visible;
+      box-shadow:var(--shadowSoft);
+    }
+    .list li{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.06);
+    }
+    .list li:last-child{border-bottom:none}
+    .list .name{font-weight:650}
+  
+    /* iPhone a úzké displeje, zabrání mikro přesahům a skládá pole pod sebe */
+    @media (max-width:520px){
+      .row > .field{
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+      }
+      .row > button.btn{
+        flex: 1 1 100%;
+      }
+      .field input,.field select,.field textarea{
+        max-width:100%;
+      }
+      input[type="date"]{
+        -webkit-appearance: none;
+        appearance: none;
+      }
+    }
+    .footerNote{
+      margin-top:18px;
+      text-align:center;
+      color:rgba(255,255,255,.45);
+      font-size:12.5px;
+      line-height:1.4;
+    }
+
+
+  
+    @media (max-width:520px){
+      #chipTrainGroup{
+        width:100%;
+        justify-content:flex-start;
+      }
+      #chipTrainGroup .chip{
+        max-width:none;
+      }
+      .leftTrain .trainList{
+        max-height:none;
+      }
+    }
+
+    .captureMode .captureField{
+      width:100%;
+      display:block;
+      padding:11px 12px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:16px;
+      color:var(--text);
+      background:
+        radial-gradient(120px 80px at 20% 10%, rgba(255,255,255,.18), transparent 60%),
+        radial-gradient(160px 100px at 90% 0%, rgba(120,170,255,.16), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      box-shadow:
+        0 12px 30px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.10);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      min-height:44px;
+      display:flex;
+      align-items:center;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Report prodejců</h1>
+      <div class="row">
+        <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
+        <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
+        </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Vstup dat</h2>
+
+        <div class="row">
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="rve">RVE</label>
+            <select id="rve"></select>
+          </div>
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="store">Prodejna</label>
+            <select id="store"></select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="seller">Prodejce</label>
+            <select id="seller"></select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="flex:1; min-width:160px;">
+            <label for="date">Datum</label>
+            <input id="date" type="date" />
+          </div>
+          <div class="field" style="flex:1; min-width:160px;">
+            <label for="value">Podíl na tržbě s DPH (služby)</label>
+            <input id="value" type="text" inputmode="decimal" placeholder="10,9" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="addBtn" type="button">Přidat záznam</button>
+          <button class="btn" id="manageBtn" type="button">Správa prodejců</button>
+          <button class="btn" id="trainBtn" type="button">Zapsat trénink</button>
+          <button class="btn ghost" id="clearBtn" type="button">Smazat všechna data</button>
+        
+
+        <div class="hr"></div>
+
+        <div class="trainWrap leftTrain">
+          <div class="trainTitle">Tréninky v období</div>
+          <div class="trainList" id="trainList"></div>
+        </div>
+
+      </div>
+
+      <div>
+        <div class="card" id="reportCard">
+          <h2>Report</h2>
+
+          <div class="reportTop">
+            <div class="avatar" title="Prodejce">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M32 34c8 0 14-6.4 14-14.3C46 11.9 39.7 6 32 6S18 11.9 18 19.7C18 27.6 24 34 32 34z" fill="rgba(255,255,255,.80)"></path>
+                <path d="M10 58c2.7-13 13-20 22-20s19.3 7 22 20" fill="rgba(255,255,255,.80)"></path>
+              </svg>
+              <div class="ini" id="avatarIni">..</div>
+            </div>
+
+            <div style="flex:1; min-width:0;">
+              <div class="row">
+                <span class="chip" id="chipSeller">Vyber prodejce</span>
+                <span class="chip" id="chipStore">Prodejna</span>
+                <span class="chip" id="chipRve">RVE</span>
+                <span class="chipGroup" id="chipTrainGroup">
+                  <span class="chip" id="chipTrainTotal">Trénink celkem 0 h</span>
+                <span class="chip" id="chipTrainAvg">Průměr na trénink 0 h</span>
+                <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="field" style="flex:1; min-width:200px;">
+              <label for="from">Od</label>
+              <input id="from" type="date" />
+            </div>
+            <div class="field" style="flex:1; min-width:200px;">
+              <label for="to">Do</label>
+              <input id="to" type="date" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn primary" id="refreshBtn" type="button">Přepočítat</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <div class="t">Aktuální období</div>
+              <div class="v" id="kpiCurrent">0 %</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Minulé období</div>
+              <div class="v" id="kpiPrev">0 %</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Změna</div>
+              <div class="v neu" id="kpiChange">0 %</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <canvas id="chart"></canvas>
+
+          <div class="hr"></div>
+
+          <details id="detailsRows">
+            <summary>Záznamy v období</summary>
+            <div style="overflow:auto; margin-top:10px;">
+              <table class="miniTable" id="tbl">
+                <thead>
+                  <tr class="muted">
+                    <td>Datum</td>
+                    <td>Prodejce</td>
+                    <td>Prodejna</td>
+                    <td>Hodnota</td>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+          </details>
+
+        </div>
+      </div>
+    </div>
+  <footer class="footerNote">Aplikaci vytvořil a publikuje Radek Tlachač. Obsah ani řešení není dovoleno kopírovat nebo dále šířit bez souhlasu autora.</footer>
+  </div>
+
+  <div class="modalBackdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modalHeader">
+        <div class="modalTitle" id="modalTitle">Správa prodejců</div>
+        <button class="btn small" id="closeModalBtn" type="button">Zavřít</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="row">
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="mRve">RVE</label>
+            <select id="mRve"></select>
+          </div>
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="mStore">Prodejna</label>
+            <select id="mStore"></select>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <div class="field" style="flex:1; min-width:260px;">
+            <label for="mSeller">Přidat prodejce</label>
+            <input id="mSeller" type="text" placeholder="Jméno a příjmení" />
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn primary" id="mAddBtn" type="button">Přidat</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row" style="justify-content:space-between;">
+          <div class="muted">Prodejci na prodejně</div>
+          <button class="btn small danger" id="mClearStoreBtn" type="button">Smazat všechny na prodejně</button>
+        </div>
+
+        <ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modalBackdrop" id="trainBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="trainTitle">
+      <div class="modalHeader">
+        <div class="modalTitle" id="trainTitle">Zapsat trénink</div>
+        <button class="btn small" id="closeTrainBtn" type="button">Zavřít</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="row">
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="tRve">RVE</label>
+            <select id="tRve"></select>
+          </div>
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="tStore">Prodejna</label>
+            <select id="tStore"></select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="tSeller">Prodejce</label>
+            <select id="tSeller"></select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="flex:1; min-width:200px;">
+            <label for="tDate">Datum</label>
+            <input id="tDate" type="date" />
+          </div>
+          <div class="field" style="flex:1; min-width:200px;">
+            <label for="tHours">Doba tréninku v hodinách</label>
+            <input id="tHours" type="text" inputmode="decimal" placeholder="1,5" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="flex:1; min-width:200px;">
+            <label for="tNote">Poznámka</label>
+            <textarea id="tNote" rows="3" placeholder="Volitelně"></textarea>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="saveTrainBtn" type="button">Uložit trénink</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    const STORAGE_KEY = "reportProdejcuDataV2";
+    const LISTS_KEY = "reportProdejcuListsV1";
+    const TRAINING_KEY = "reportProdejcuTrainingV1";
+
+    const METRIC_KEY = "podil_sluzby";
+    const METRIC_LABEL = "Podíl na tržbě s DPH (služby)";
+
+    const RVE_SEED = [
+      {
+        rve: "Karásek Jaroslav",
+        stores: [
+          "DAT Hradec Králové Aupark",
+          "DAT Hradec Králové Futurum",
+          "DAT Jablonec nad Nisou Central",
+          "DAT Mladá Boleslav Bondy Centrum",
+          "DAT Mladá Boleslav Olympia",
+          "DAT Neratovice",
+          "DAT Trutnov Máj",
+          "DATE Hradec Králové Nové Tesco",
+          "DATE Jičín Hradecká",
+          "DATF Dvůr Králové Erbenova",
+          "DATF Jablonec nad Nisou Budovatelů"
+        ]
+      },
+      {
+        rve: "Lelovský Radek",
+        stores: [
+          "DAT Chomutov Chomutovka",
+          "DAT Chomutov Nákupní park",
+          "DAT Karlovy Vary Varyáda",
+          "DAT Plzeň Borská Pole",
+          "DAT Plzeň Plaza",
+          "DAT Plzeň Rokycanská",
+          "DATE Karlovy Vary Shopland",
+          "DATE Meclov Mráčnice",
+          "DATE Plzeň Area Bory",
+          "DATE Plzeň Olympia",
+          "DATE Sokolov Tesco",
+          "DATF Cheb NC Pražská",
+          "DATF Plzeň S1 Center"
+        ]
+      },
+      {
+        rve: "Němeček Jaroslav",
+        stores: [
+          "DAT Beroun Králův Dvůr",
+          "DAT Kladno Central",
+          "DAT Kozomín",
+          "DAT Mělník City Market",
+          "DAT Most Central",
+          "DAT Slaný S1 Center",
+          "DAT Terezín RP Terezín",
+          "DAT Žatec KPD",
+          "DATE Litvínov U Autodílen",
+          "DATE Louny Václava Majera"
+        ]
+      },
+      {
+        rve: "Starý Petr",
+        stores: [
+          "DAT Děčín Kaufland",
+          "DAT Děčín Pivovar",
+          "DAT Liberec Forum",
+          "DAT Liberec Nisa",
+          "DAT Nový Bor B. Egermanna",
+          "DAT Teplice Galerie",
+          "DAT Teplice Olympia",
+          "DAT Ústí nad Labem Forum",
+          "DATE Česká Lípa Mimoňská",
+          "DATE Liberec Géčko",
+          "DATE Ústí nad Labem Tyršova",
+          "DATF Varnsdorf"
+        ]
+      },
+      {
+        rve: "Vlček Marian",
+        stores: [
+          "DAT Praha Arkády Pankrác",
+          "DAT Praha Bořislavka",
+          "DAT Praha DBK",
+          "DAT Praha Galerie Harfa",
+          "DAT Praha Hostivař Vivo",
+          "DAT Praha Letná Centrum Stromovka",
+          "DAT Praha Novodvorská Plaza",
+          "DAT Praha Šestka",
+          "DAT Praha Zličín Homepark",
+          "DATE Praha Galerie Butovice",
+          "DATE Praha Zličín"
+        ]
+      }
+    ];
+
+    function safeJsonParse(s, fallback){
+      try { return JSON.parse(s); } catch { return fallback; }
+    }
+
+    function loadRows(){
+      return safeJsonParse(localStorage.getItem(STORAGE_KEY) || "[]", []);
+    }
+    function saveRows(rows){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+    }
+
+    function loadLists(){
+      const raw = localStorage.getItem(LISTS_KEY);
+      if (!raw){
+        const seeded = {
+          rves: RVE_SEED.map(r => ({
+            rve: r.rve,
+            stores: r.stores.map(name => ({ name, sellers: [] }))
+          }))
+        };
+        localStorage.setItem(LISTS_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      const obj = safeJsonParse(raw, null);
+      if (!obj || !Array.isArray(obj.rves)){
+        localStorage.removeItem(LISTS_KEY);
+        return loadLists();
+      }
+      return obj;
+    }
+    function saveLists(lists){
+      localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
+    }
+
+    function loadTraining(){
+      return safeJsonParse(localStorage.getItem(TRAINING_KEY) || "[]", []);
+    }
+    function saveTraining(items){
+      localStorage.setItem(TRAINING_KEY, JSON.stringify(items));
+    }
+
+    function parseHours(input){
+      const n = parseNumberFlexible(input);
+      if (n === null) return null;
+      if (n < 0) return null;
+      return n;
+    }
+
+    function formatHours(hours){
+      const v = Number(hours);
+      if (!Number.isFinite(v)) return "0";
+      if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
+      return v.toFixed(1).replace(".", ",");
+    }
+
+    function sumTraining(items){
+      const vals = items.map(x => Number(x.hours)).filter(v => Number.isFinite(v));
+      if (vals.length === 0) return 0;
+      return vals.reduce((a,b)=>a+b,0);
+    }
+
+    function trainingForSeller(rveName, storeName, sellerName){
+      const all = loadTraining();
+      return all.filter(t => {
+        if (!t) return false;
+        if (rveName && t.rve !== rveName) return false;
+        if (storeName && t.store !== storeName) return false;
+        if (sellerName && t.seller !== sellerName) return false;
+        const h = Number(t.hours);
+        if (!Number.isFinite(h)) return false;
+        return true;
+      });
+    }
+
+    function trainingForSellerInRange(rveName, storeName, sellerName, fromD, toD){
+      const list = trainingForSeller(rveName, storeName, sellerName);
+      return list.filter(t => {
+        const d = parseDateISO(t.date);
+        if (!d) return false;
+        return d >= fromD && d <= toD;
+      });
+    }
+
+    function normText(s){
+      return String(s || "").trim();
+    }
+
+    function parseNumberFlexible(input){
+      const s = String(input || "").trim().replace(/\s/g,"").replace(",", ".");
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function formatPct(value){
+      const v = Number(value);
+      if (!Number.isFinite(v)) return "0 %";
+      return `${v.toFixed(2).replace(".", ",")} %`;
+    }
+
+    function ymd(d){
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,"0");
+      const da = String(d.getDate()).padStart(2,"0");
+      return `${y}-${m}-${da}`;
+    }
+
+    function parseDateISO(s){
+      const v = String(s || "").trim();
+      if (!v) return null;
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return null;
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function formatDateCZ(iso){
+      const s = String(iso || "").trim();
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return s;
+      return `${m[3]}.${m[2]}.${m[1]}`;
+    }
+
+    function daysBetweenInclusive(from, to){
+      const ms = 24*60*60*1000;
+      return Math.round((to - from) / ms) + 1;
+    }
+
+    function computeAvg(rows){
+      const vals = rows.map(r => r.value).filter(v => Number.isFinite(v));
+      if (vals.length === 0) return 0;
+      return vals.reduce((a,b)=>a+b,0) / vals.length;
+    }
+
+    function computeChangePct(prev, current){
+      if (!Number.isFinite(prev) || !Number.isFinite(current)) return 0;
+      if (prev === 0 && current === 0) return 0;
+      if (prev === 0) return 100;
+      return ((current - prev) / prev) * 100;
+    }
+
+    function initials(name){
+      const n = normText(name);
+      if (!n) return "..";
+      const parts = n.split(/\s+/).filter(Boolean);
+      const a = parts[0]?.[0] || ".";
+      const b = (parts.length > 1 ? parts[parts.length-1][0] : parts[0]?.[1]) || ".";
+      return (a + b).toUpperCase();
+    }
+
+    function downloadTextFile(filename, content, mime){
+      const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 600);
+    }
+
+    function downloadBlobFile(filename, blob){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 600);
+    }
+
+
+    function safeFilePart(s){
+      return String(s || "")
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_\u00C0-\u017F]/g, "")
+        .slice(0, 60) || "report";
+    }
+
+    function buildReportNameBase(){
+      const seller = els.seller.value || "prodejce";
+      const from = els.from.value || "";
+      const to = els.to.value || "";
+      const sellerPart = safeFilePart(seller);
+      const rangePart = (from && to) ? `${from}_az_${to}` : "";
+      return rangePart ? `report_${sellerPart}_${rangePart}` : `report_${sellerPart}`;
+    }
+
+    function csvEscape(value){
+      const s = String(value ?? "");
+      if (/[;"\r\n]/.test(s)){
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    }
+
+    function rowsToCsv(dataRows){
+      const header = ["Datum", "RVE", "Prodejna", "Prodejce", "Hodnota"];
+      const lines = [header.map(csvEscape).join(";")];
+
+      const sorted = [...dataRows].sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+
+      for (const r of sorted){
+        const line = [
+          formatDateCZ(r.date),
+          r.rve,
+          r.store,
+          r.seller,
+          String(Number(r.value).toFixed(2)).replace(".", ",")
+        ].map(csvEscape).join(";");
+        lines.push(line);
+      }
+
+      const bom = "\uFEFF";
+      return bom + lines.join("\r\n");
+    }
+
+    function sellersToCsv(listsObj){
+      const header = ["RVE", "Prodejna", "Prodejce"];
+      const lines = [header.map(csvEscape).join(";")];
+
+      for (const r of (listsObj?.rves || [])){
+        for (const s of (r.stores || [])){
+          const sellers = Array.isArray(s.sellers) ? s.sellers : [];
+          if (sellers.length === 0){
+            lines.push([r.rve, s.name, ""].map(csvEscape).join(";"));
+            continue;
+          }
+          for (const seller of sellers.slice().sort((a,b)=>a.localeCompare(b,"cs"))){
+            lines.push([r.rve, s.name, seller].map(csvEscape).join(";"));
+          }
+        }
+      }
+
+      const bom = "\uFEFF";
+      return bom + lines.join("\r\n");
+    }
+
+    const els = {
+      rve: document.getElementById("rve"),
+      store: document.getElementById("store"),
+      seller: document.getElementById("seller"),
+      date: document.getElementById("date"),
+      value: document.getElementById("value"),
+      addBtn: document.getElementById("addBtn"),
+      manageBtn: document.getElementById("manageBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+
+      from: document.getElementById("from"),
+      to: document.getElementById("to"),
+      refreshBtn: document.getElementById("refreshBtn"),
+
+      exportRowsBtn: document.getElementById("exportRowsBtn"),
+exportImageBtn: document.getElementById("exportImageBtn"),
+kpiCurrent: document.getElementById("kpiCurrent"),
+      kpiPrev: document.getElementById("kpiPrev"),
+      kpiChange: document.getElementById("kpiChange"),
+
+      tblBody: document.querySelector("#tbl tbody"),
+      trainList: document.getElementById("trainList"),
+      chart: document.getElementById("chart"),
+
+      chipSeller: document.getElementById("chipSeller"),
+      chipStore: document.getElementById("chipStore"),
+      chipRve: document.getElementById("chipRve"),
+      chipTrainTotal: document.getElementById("chipTrainTotal"),
+      chipTrainAvg: document.getElementById("chipTrainAvg"),
+      chipTrainCount: document.getElementById("chipTrainCount"),
+
+      avatarIni: document.getElementById("avatarIni"),
+
+      modalBackdrop: document.getElementById("modalBackdrop"),
+      closeModalBtn: document.getElementById("closeModalBtn"),
+      mRve: document.getElementById("mRve"),
+      mStore: document.getElementById("mStore"),
+      mSeller: document.getElementById("mSeller"),
+      mAddBtn: document.getElementById("mAddBtn"),
+      mSellerList: document.getElementById("mSellerList"),
+      mClearStoreBtn: document.getElementById("mClearStoreBtn"),
+
+      trainBtn: document.getElementById("trainBtn"),
+      trainBackdrop: document.getElementById("trainBackdrop"),
+      closeTrainBtn: document.getElementById("closeTrainBtn"),
+      tRve: document.getElementById("tRve"),
+      tStore: document.getElementById("tStore"),
+      tSeller: document.getElementById("tSeller"),
+      tDate: document.getElementById("tDate"),
+      tHours: document.getElementById("tHours"),
+      tNote: document.getElementById("tNote"),
+      saveTrainBtn: document.getElementById("saveTrainBtn")
+    };
+
+    let rows = loadRows();
+    let lists = loadLists();
+
+    function getRveObj(rveName){
+      return lists.rves.find(r => r.rve === rveName) || null;
+    }
+    function getStoreObj(rveName, storeName){
+      const r = getRveObj(rveName);
+      if (!r) return null;
+      return r.stores.find(s => s.name === storeName) || null;
+    }
+
+    function fillSelect(selectEl, options, preferred){
+      selectEl.innerHTML = "";
+      for (const opt of options){
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        selectEl.appendChild(o);
+      }
+      if (preferred && options.includes(preferred)){
+        selectEl.value = preferred;
+      }
+    }
+
+    function currentRve(){ return els.rve.value || ""; }
+    function currentStore(){ return els.store.value || ""; }
+
+    function syncStoreSelect(){
+      const rveName = currentRve();
+      const r = getRveObj(rveName);
+      const stores = r ? r.stores.map(s => s.name) : [];
+      const preferred = stores.includes(els.store.value) ? els.store.value : (stores[0] || "");
+      fillSelect(els.store, stores, preferred);
+      syncSellerSelect();
+      syncChips();
+    }
+
+    function syncSellerSelect(){
+      const rveName = currentRve();
+      const storeName = currentStore();
+      const sObj = getStoreObj(rveName, storeName);
+      const sellers = (sObj ? sObj.sellers : []).slice().sort((a,b)=>a.localeCompare(b,"cs"));
+
+      els.seller.innerHTML = "";
+      const ph = document.createElement("option");
+      ph.value = "";
+      ph.textContent = sellers.length ? "Vyber prodejce" : "Nejdřív přidej prodejce";
+      els.seller.appendChild(ph);
+
+      for (const name of sellers){
+        const o = document.createElement("option");
+        o.value = name;
+        o.textContent = name;
+        els.seller.appendChild(o);
+      }
+
+      els.seller.value = "";
+      syncChips();
+      updateActionStates();
+    }
+
+    function updateActionStates(){
+      const hasSeller = Boolean(els.seller.value);
+      els.addBtn.disabled = !hasSeller;
+      els.refreshBtn.disabled = !hasSeller;
+    }
+
+    function syncChips(){
+      const rveName = currentRve() || "RVE";
+      const storeName = currentStore() || "Prodejna";
+      const sellerName = els.seller.value || "Vyber prodejce";
+
+      els.chipRve.textContent = rveName;
+      els.chipStore.textContent = storeName;
+      els.chipSeller.textContent = sellerName;
+      els.avatarIni.textContent = initials(els.seller.value);
+
+      
+      const hasSeller = Boolean(els.seller.value);
+      if (!hasSeller){
+        els.chipTrainTotal.textContent = "Trénink celkem 0 h";
+        els.chipTrainAvg.textContent = "Průměr na trénink 0 h";
+        els.chipTrainCount.textContent = "Počet tréninků 0";
+        return;
+      }
+
+      const allItems = trainingForSeller(currentRve(), currentStore(), els.seller.value);
+      const total = sumTraining(allItems);
+      const count = allItems.length;
+      const avg = count ? (total / count) : 0;
+
+      els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
+      els.chipTrainAvg.textContent = `Průměr na trénink ${formatHours(avg)} h`;
+      els.chipTrainCount.textContent = `Počet tréninků ${count}`;
+
+    }
+
+    function setDefaultRangeIfEmpty(){
+      if (els.from.value && els.to.value) return;
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const from = new Date(today);
+      from.setDate(from.getDate() - 29);
+      if (!els.from.value) els.from.value = ymd(from);
+      if (!els.to.value) els.to.value = ymd(today);
+    }
+
+    function ensureDefaultDates(){
+      if (rows.length === 0) return;
+      const dates = rows.map(r => parseDateISO(r.date)).filter(Boolean).sort((a,b)=>a-b);
+      if (dates.length === 0) return;
+      const minD = dates[0];
+      const maxD = dates[dates.length-1];
+      if (!els.from.value) els.from.value = ymd(minD);
+      if (!els.to.value) els.to.value = ymd(maxD);
+    }
+
+    function addSellerIfMissing(rveName, storeName, sellerName){
+      const clean = normText(sellerName);
+      if (!clean) return false;
+      const sObj = getStoreObj(rveName, storeName);
+      if (!sObj) return false;
+      const exists = sObj.sellers.some(x => x.localeCompare(clean, "cs", { sensitivity:"base" }) === 0);
+      if (exists) return false;
+      sObj.sellers.push(clean);
+      saveLists(lists);
+      return true;
+    }
+
+    function removeSeller(rveName, storeName, sellerName){
+      const sObj = getStoreObj(rveName, storeName);
+      if (!sObj) return;
+      sObj.sellers = sObj.sellers.filter(x => x !== sellerName);
+      saveLists(lists);
+    }
+
+    function clearSellersForStore(rveName, storeName){
+      const sObj = getStoreObj(rveName, storeName);
+      if (!sObj) return;
+      sObj.sellers = [];
+      saveLists(lists);
+    }
+
+    function rowsInRange(rveName, storeName, sellerName, fromD, toD){
+      return rows.filter(r => {
+        if (r.metricKey !== METRIC_KEY) return false;
+        if (rveName && r.rve !== rveName) return false;
+        if (storeName && r.store !== storeName) return false;
+        if (sellerName && r.seller !== sellerName) return false;
+        const d = parseDateISO(r.date);
+        if (!d) return false;
+        return d >= fromD && d <= toD;
+      });
+    }
+
+    function buildSeries(rowsIn){
+      const map = new Map();
+      for (const r of rowsIn){
+        const d = r.date;
+        if (!map.has(d)) map.set(d, []);
+        map.get(d).push(r.value);
+      }
+      const keys = Array.from(map.keys()).sort((a,b)=>a.localeCompare(b));
+      const values = keys.map(k => {
+        const arr = map.get(k) || [];
+        if (arr.length === 0) return 0;
+        return arr.reduce((x,y)=>x+y,0) / arr.length;
+      });
+      return { isoLabels: keys, values };
+    }
+
+    function renderTable(rowsIn){
+      els.tblBody.innerHTML = "";
+      const sorted = [...rowsIn].sort((a,b)=>a.date.localeCompare(b.date));
+      for (const r of sorted){
+        const tr = document.createElement("tr");
+
+        const td1 = document.createElement("td");
+        td1.textContent = formatDateCZ(r.date);
+
+        const td2 = document.createElement("td");
+        td2.textContent = r.seller;
+
+        const td3 = document.createElement("td");
+        td3.textContent = r.store;
+
+        const td4 = document.createElement("td");
+        td4.textContent = formatPct(r.value);
+
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
+        els.tblBody.appendChild(tr);
+      }
+    }
+
+
+    function renderTrainingList(rveName, storeName, sellerName, fromD, toD){
+      if (!els.trainList) return;
+      els.trainList.innerHTML = "";
+
+      if (!sellerName || !fromD || !toD || fromD > toD){
+        return;
+      }
+
+      const items = trainingForSellerInRange(rveName, storeName, sellerName, fromD, toD)
+        .slice()
+        .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+
+      if (items.length === 0){
+        const div = document.createElement("div");
+        div.className = "muted";
+        div.textContent = "V tomto období nejsou žádné tréninky.";
+        els.trainList.appendChild(div);
+        return;
+      }
+
+      for (const t of items){
+        const wrap = document.createElement("details");
+        wrap.className = "trainItem";
+
+        const sum = document.createElement("summary");
+
+        const meta = document.createElement("div");
+        meta.className = "trainMeta";
+
+        const pDate = document.createElement("span");
+        pDate.className = "trainPill";
+        pDate.textContent = formatDateCZ(t.date);
+
+        const pHours = document.createElement("span");
+        pHours.className = "trainPill";
+        pHours.textContent = `${formatHours(t.hours)} h`;
+
+        meta.appendChild(pDate);
+        meta.appendChild(pHours);
+
+        const right = document.createElement("span");
+        right.className = "muted";
+        right.textContent = "Poznámka";
+
+        sum.appendChild(meta);
+        sum.appendChild(right);
+
+        const note = document.createElement("div");
+        note.className = "trainNote";
+        note.textContent = t.note ? String(t.note) : "Bez poznámky.";
+
+        wrap.appendChild(sum);
+        wrap.appendChild(note);
+        els.trainList.appendChild(wrap);
+      }
+    }
+
+    let chartInstance = null;
+
+    function setChangeStyle(change){
+      els.kpiChange.classList.remove("pos","neg","neu");
+      if (change > 0.05) els.kpiChange.classList.add("pos");
+      else if (change < -0.05) els.kpiChange.classList.add("neg");
+      else els.kpiChange.classList.add("neu");
+    }
+
+    function chartColorForChange(change){
+      if (change > 0.05) return getComputedStyle(document.documentElement).getPropertyValue("--ok").trim();
+      if (change < -0.05) return getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+      return getComputedStyle(document.documentElement).getPropertyValue("--neu").trim();
+    }
+
+    function renderChart(series, change){
+      const color = chartColorForChange(change);
+
+      if (chartInstance){
+        chartInstance.destroy();
+        chartInstance = null;
+      }
+
+      const displayLabels = (series.isoLabels || []).map(formatDateCZ);
+
+      chartInstance = new Chart(els.chart, {
+        type: "line",
+        data: {
+          labels: displayLabels,
+          datasets: [{
+            label: METRIC_LABEL,
+            data: series.values,
+            tension: 0.35,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            borderColor: color,
+            pointBackgroundColor: color,
+            pointBorderColor: color,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          animation: { duration: 850, easing: "easeOutQuart" },
+          plugins: {
+            legend: { display: true, labels: { color: "rgba(255,255,255,.80)" } },
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const idx = items?.[0]?.dataIndex ?? null;
+                  if (idx === null) return "";
+                  const iso = series.isoLabels?.[idx] || "";
+                  return formatDateCZ(iso);
+                },
+                label: (ctx) => formatPct(Number(ctx.raw))
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: "rgba(255,255,255,.65)" }, grid: { color: "rgba(255,255,255,.08)" } },
+            y: {
+              ticks: {
+                color: "rgba(255,255,255,.65)",
+                callback: (val) => `${Number(val).toFixed(0)} %`
+              },
+              grid: { color: "rgba(255,255,255,.08)" }
+            }
+          }
+        }
+      });
+    }
+
+    function renderReport(){
+      setDefaultRangeIfEmpty();
+
+      const rveName = currentRve();
+      const storeName = currentStore();
+      const sellerName = els.seller.value || "";
+
+      const fromD = parseDateISO(els.from.value);
+      const toD = parseDateISO(els.to.value);
+      if (!fromD || !toD || fromD > toD) return;
+
+      if (!sellerName){
+        els.kpiCurrent.textContent = "0 %";
+        els.kpiPrev.textContent = "0 %";
+        els.kpiChange.textContent = "0 %";
+        setChangeStyle(0);
+        renderChart({ isoLabels: [], values: [] }, 0);
+        els.tblBody.innerHTML = "";
+        if (els.trainList) els.trainList.innerHTML = "";
+        return;
+      }
+
+      const lenDays = daysBetweenInclusive(fromD, toD);
+      const prevTo = new Date(fromD);
+      prevTo.setDate(prevTo.getDate() - 1);
+      const prevFrom = new Date(prevTo);
+      prevFrom.setDate(prevFrom.getDate() - (lenDays - 1));
+
+      const currentRows = rowsInRange(rveName, storeName, sellerName, fromD, toD);
+      const prevRows = rowsInRange(rveName, storeName, sellerName, prevFrom, prevTo);
+
+      const currentAvg = computeAvg(currentRows);
+      const prevAvg = computeAvg(prevRows);
+      const change = computeChangePct(prevAvg, currentAvg);
+
+      els.kpiCurrent.textContent = formatPct(currentAvg);
+      els.kpiPrev.textContent = formatPct(prevAvg);
+      els.kpiChange.textContent = `${change.toFixed(1).replace(".", ",")} %`;
+      setChangeStyle(change);
+
+      const series = buildSeries(currentRows);
+      renderChart(series, change);
+      renderTable(currentRows);
+      renderTrainingList(rveName, storeName, sellerName, fromD, toD);
+
+      syncChips();
+    }
+
+    function openModal(){
+      els.modalBackdrop.classList.add("show");
+      els.modalBackdrop.setAttribute("aria-hidden","false");
+      syncModalSelectors();
+      renderModalList();
+      els.mSeller.value = "";
+      els.mSeller.focus();
+    }
+    function closeModal(){
+      els.modalBackdrop.classList.remove("show");
+      els.modalBackdrop.setAttribute("aria-hidden","true");
+    }
+
+    function syncModalSelectors(){
+      const rves = lists.rves.map(r => r.rve);
+      fillSelect(els.mRve, rves, currentRve() || rves[0]);
+      syncModalStores();
+    }
+    function syncModalStores(){
+      const rveName = els.mRve.value;
+      const r = getRveObj(rveName);
+      const stores = r ? r.stores.map(s => s.name) : [];
+      fillSelect(els.mStore, stores, currentStore() || stores[0]);
+      renderModalList();
+    }
+
+    function renderModalList(){
+      const rveName = els.mRve.value;
+      const storeName = els.mStore.value;
+      const sObj = getStoreObj(rveName, storeName);
+      const sellers = (sObj ? sObj.sellers : []).slice().sort((a,b)=>a.localeCompare(b,"cs"));
+
+      els.mSellerList.innerHTML = "";
+      for (const name of sellers){
+        const li = document.createElement("li");
+
+        const left = document.createElement("div");
+        left.className = "name";
+        left.textContent = name;
+
+        const del = document.createElement("button");
+        del.className = "btn small danger";
+        del.type = "button";
+        del.textContent = "Smazat";
+        del.addEventListener("click", () => {
+          const ok = confirm(`Smazat prodejce ${name} z prodejny?`);
+          if (!ok) return;
+          removeSeller(rveName, storeName, name);
+          lists = loadLists();
+          renderModalList();
+          syncStoreSelect();
+        });
+
+        li.appendChild(left);
+        li.appendChild(del);
+        els.mSellerList.appendChild(li);
+      }
+    }
+
+    function addSellerFromModal(){
+      const rveName = els.mRve.value;
+      const storeName = els.mStore.value;
+      const name = normText(els.mSeller.value);
+      if (!name){
+        alert("Doplň jméno prodejce.");
+        return;
+      }
+      const added = addSellerIfMissing(rveName, storeName, name);
+      lists = loadLists();
+      if (!added){
+        alert("Prodejce už na prodejně je.");
+        return;
+      }
+      els.mSeller.value = "";
+      renderModalList();
+      syncStoreSelect();
+    }
+
+
+    function fillSellerSelectInto(selectEl, sellers, placeholderText){
+      selectEl.innerHTML = "";
+      const ph = document.createElement("option");
+      ph.value = "";
+      ph.textContent = placeholderText;
+      selectEl.appendChild(ph);
+
+      for (const name of sellers){
+        const o = document.createElement("option");
+        o.value = name;
+        o.textContent = name;
+        selectEl.appendChild(o);
+      }
+    }
+
+    function syncTrainingStores(){
+      const rveName = els.tRve.value || "";
+      const r = getRveObj(rveName);
+      const stores = r ? r.stores.map(s => s.name) : [];
+      const preferred = stores.includes(els.tStore.value) ? els.tStore.value : (stores[0] || "");
+      fillSelect(els.tStore, stores, preferred);
+      syncTrainingSellers();
+    }
+
+    function syncTrainingSellers(){
+      const rveName = els.tRve.value || "";
+      const storeName = els.tStore.value || "";
+      const sObj = getStoreObj(rveName, storeName);
+      const sellers = (sObj ? sObj.sellers : []).slice().sort((a,b)=>a.localeCompare(b,"cs"));
+
+      const ph = sellers.length ? "Vyber prodejce" : "Nejdřív přidej prodejce";
+      fillSellerSelectInto(els.tSeller, sellers, ph);
+
+      const preferred = sellers.includes(els.seller.value) ? els.seller.value : "";
+      els.tSeller.value = preferred;
+    }
+
+    function openTrainingModal(){
+      els.trainBackdrop.classList.add("show");
+      els.trainBackdrop.setAttribute("aria-hidden","false");
+
+      const rves = lists.rves.map(r => r.rve);
+      fillSelect(els.tRve, rves, currentRve() || rves[0] || "");
+      syncTrainingStores();
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      els.tDate.value = ymd(today);
+      els.tHours.value = "";
+      els.tNote.value = "";
+      els.tHours.focus();
+    }
+
+    function closeTrainingModal(){
+      els.trainBackdrop.classList.remove("show");
+      els.trainBackdrop.setAttribute("aria-hidden","true");
+    }
+
+    function addTrainingEntry(){
+      const rveName = els.tRve.value || "";
+      const storeName = els.tStore.value || "";
+      const sellerName = els.tSeller.value || "";
+      const date = normText(els.tDate.value);
+      const hours = parseHours(els.tHours.value);
+      const note = normText(els.tNote.value);
+
+      if (!rveName){ alert("Vyber RVE."); return; }
+      if (!storeName){ alert("Vyber prodejnu."); return; }
+      if (!sellerName){ alert("Vyber prodejce."); return; }
+      if (!date){ alert("Vyber datum."); return; }
+      if (hours === null){ alert("Doba tréninku není číslo."); return; }
+      if (hours === 0){ alert("Doba tréninku musí být větší než nula."); return; }
+
+      const all = loadTraining();
+      all.push({
+        id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2),
+        date,
+        rve: rveName,
+        store: storeName,
+        seller: sellerName,
+        hours,
+        note
+      });
+      saveTraining(all);
+
+      closeTrainingModal();
+
+      if (rveName === currentRve() && storeName === currentStore() && sellerName === (els.seller.value || "")){
+        syncChips();
+      }
+
+      alert("Trénink uložen.");
+    }
+
+
+    function addOneRow(){
+      const rveName = currentRve();
+      const storeName = currentStore();
+      const sellerName = els.seller.value || "";
+      const date = normText(els.date.value);
+      const value = parseNumberFlexible(els.value.value);
+
+      if (!rveName){ alert("Vyber RVE."); return; }
+      if (!storeName){ alert("Vyber prodejnu."); return; }
+      if (!sellerName){ alert("Vyber prodejce."); return; }
+      if (!date){ alert("Vyber datum."); return; }
+      if (value === null){ alert("Hodnota není číslo."); return; }
+
+      rows.push({
+        id: crypto.randomUUID(),
+        date,
+        rve: rveName,
+        store: storeName,
+        seller: sellerName,
+        metricKey: METRIC_KEY,
+        value
+      });
+
+      saveRows(rows);
+      ensureDefaultDates();
+      els.value.value = "";
+      els.value.focus();
+      renderReport();
+    }
+
+    function exportRowsCsv(){
+      const data = loadRows().filter(r => r && r.metricKey === METRIC_KEY);
+      const csv = rowsToCsv(data);
+      const ts = new Date();
+      const stamp = `${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,"0")}${String(ts.getDate()).padStart(2,"0")}_${String(ts.getHours()).padStart(2,"0")}${String(ts.getMinutes()).padStart(2,"0")}`;
+      downloadTextFile(`export_excel_zaznamy_${stamp}.csv`, csv, "text/csv;charset=utf-8");
+    }
+
+    function exportReportImage(){
+      const node = document.getElementById("reportCard");
+      if (!node){
+        alert("Report nenalezen.");
+        return;
+      }
+
+
+    function init(){
+      const rves = lists.rves.map(r => r.rve);
+      fillSelect(els.rve, rves, rves[0]);
+      syncStoreSelect();
+      ensureDefaultDates();
+      setDefaultRangeIfEmpty();
+      updateActionStates();
+      renderReport();
+      syncChips();
+    }
+
+    init();
+
+    els.rve.addEventListener("change", () => {
+      syncStoreSelect();
+      renderReport();
+    });
+    els.store.addEventListener("change", () => {
+      syncSellerSelect();
+      renderReport();
+    });
+    els.seller.addEventListener("change", () => {
+      syncChips();
+      updateActionStates();
+      renderReport();
+    });
+
+    els.refreshBtn.addEventListener("click", renderReport);
+    els.from.addEventListener("change", renderReport);
+    els.to.addEventListener("change", renderReport);
+
+    els.addBtn.addEventListener("click", addOneRow);
+
+    els.clearBtn.addEventListener("click", () => {
+      const ok = confirm("Opravdu chceš smazat všechna data v tomto prohlížeči?");
+      if (!ok) return;
+      rows = [];
+      saveRows(rows);
+      setDefaultRangeIfEmpty();
+      renderReport();
+    });
+
+    els.manageBtn.addEventListener("click", openModal);
+    els.closeModalBtn.addEventListener("click", closeModal);
+    els.modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === els.modalBackdrop) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (els.modalBackdrop.classList.contains("show")) closeModal();
+      if (els.trainBackdrop.classList.contains("show")) closeTrainingModal();
+    });
+
+    els.mRve.addEventListener("change", syncModalStores);
+    els.mStore.addEventListener("change", renderModalList);
+    els.mAddBtn.addEventListener("click", addSellerFromModal);
+    els.mSeller.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addSellerFromModal();
+    });
+
+    els.mClearStoreBtn.addEventListener("click", () => {
+      const rveName = els.mRve.value;
+      const storeName = els.mStore.value;
+      const ok = confirm("Opravdu chceš smazat všechny prodejce na této prodejně?");
+      if (!ok) return;
+      clearSellersForStore(rveName, storeName);
+      lists = loadLists();
+      renderModalList();
+      syncStoreSelect();
+    });
+
+
+    els.trainBtn.addEventListener("click", () => {
+      const rveName = currentRve();
+      const storeName = currentStore();
+      if (!rveName || !storeName){
+        alert("Nejdřív vyber RVE a prodejnu.");
+        return;
+      }
+      openTrainingModal();
+    });
+
+    els.closeTrainBtn.addEventListener("click", closeTrainingModal);
+    els.trainBackdrop.addEventListener("click", (e) => {
+      if (e.target === els.trainBackdrop) closeTrainingModal();
+    });
+
+    els.tRve.addEventListener("change", syncTrainingStores);
+    els.tStore.addEventListener("change", syncTrainingSellers);
+
+    els.saveTrainBtn.addEventListener("click", addTrainingEntry);
+    els.tHours.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addTrainingEntry();
+    });
+
+
+    els.exportRowsBtn.addEventListener("click", exportRowsCsv);
+els.exportImageBtn.addEventListener("click", exportReportImage);
+</script>
+</body>
+</html>
