@@ -709,7 +709,13 @@
           <button class="btn small danger" id="mClearStoreBtn" type="button">Smazat všechny na prodejně</button>
         </div>
 
-        <ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
+        
+
+        <div class="row" style="justify-content:space-between; margin-top:10px;">
+          <div class="muted">Obnova seznamu</div>
+          <button class="btn small" id="mRepairListsBtn" type="button">Obnovit RVE a prodejny</button>
+        </div>
+<ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
       </div>
     </div>
   </div>
@@ -871,24 +877,119 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
     }
 
+    function seedLists(){
+      return {
+        rves: RVE_SEED.map(r => ({
+          rve: r.rve,
+          stores: r.stores.map(name => ({ name, sellers: [] }))
+        }))
+      };
+    }
+
+    function normalizeLists(obj){
+      if (!obj || !Array.isArray(obj.rves)) return null;
+      const cleaned = { rves: [] };
+
+      for (const r of obj.rves){
+        if (!r || !r.rve) continue;
+        const rveName = String(r.rve).trim();
+        if (!rveName) continue;
+
+        const stores = Array.isArray(r.stores) ? r.stores : [];
+        const cleanedStores = [];
+
+        for (const s of stores){
+          if (!s || !s.name) continue;
+          const storeName = String(s.name).trim();
+          if (!storeName) continue;
+
+          const sellers = Array.isArray(s.sellers) ? s.sellers : [];
+          const cleanedSellers = sellers
+            .map(x => String(x || "").trim())
+            .filter(Boolean);
+
+          cleanedStores.push({ name: storeName, sellers: cleanedSellers });
+        }
+
+        cleaned.rves.push({ rve: rveName, stores: cleanedStores });
+      }
+
+      return cleaned;
+    }
+
+    function repairLists(existing){
+      const base = seedLists();
+      const ex = normalizeLists(existing);
+
+      if (!ex || ex.rves.length === 0){
+        return { fixed: true, data: base };
+      }
+
+      const byRve = new Map(ex.rves.map(r => [r.rve, r]));
+      const fixed = { rves: [] };
+
+      for (const seedR of base.rves){
+        const exR = byRve.get(seedR.rve);
+        if (!exR){
+          fixed.rves.push(seedR);
+          continue;
+        }
+
+        const byStore = new Map((exR.stores || []).map(s => [s.name, s]));
+        const stores = [];
+
+        for (const seedS of seedR.stores){
+          const exS = byStore.get(seedS.name);
+          if (!exS){
+            stores.push(seedS);
+          } else {
+            stores.push({
+              name: seedS.name,
+              sellers: Array.isArray(exS.sellers) ? exS.sellers : []
+            });
+          }
+        }
+
+        // ponech i případné uživatelem přidané prodejny
+        for (const exS of (exR.stores || [])){
+          if (!stores.some(s => s.name === exS.name)){
+            stores.push({
+              name: exS.name,
+              sellers: Array.isArray(exS.sellers) ? exS.sellers : []
+            });
+          }
+        }
+
+        fixed.rves.push({ rve: seedR.rve, stores });
+      }
+
+      // ponech i případné uživatelem přidané RVE
+      for (const exR of ex.rves){
+        if (!fixed.rves.some(r => r.rve === exR.rve)){
+          fixed.rves.push(exR);
+        }
+      }
+
+      const changed = JSON.stringify(ex) !== JSON.stringify(fixed);
+      return { fixed: changed, data: fixed };
+    }
+
     function loadLists(){
       const raw = localStorage.getItem(LISTS_KEY);
       if (!raw){
-        const seeded = {
-          rves: RVE_SEED.map(r => ({
-            rve: r.rve,
-            stores: r.stores.map(name => ({ name, sellers: [] }))
-          }))
-        };
+        const seeded = seedLists();
         localStorage.setItem(LISTS_KEY, JSON.stringify(seeded));
         return seeded;
       }
+
       const obj = safeJsonParse(raw, null);
-      if (!obj || !Array.isArray(obj.rves)){
-        localStorage.removeItem(LISTS_KEY);
-        return loadLists();
+      const repaired = repairLists(obj);
+
+      if (repaired.fixed){
+        localStorage.setItem(LISTS_KEY, JSON.stringify(repaired.data));
       }
-      return obj;
+
+      return repaired.data;
     }
     function saveLists(lists){
       localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
@@ -1121,6 +1222,7 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       mAddBtn: document.getElementById("mAddBtn"),
       mSellerList: document.getElementById("mSellerList"),
       mClearStoreBtn: document.getElementById("mClearStoreBtn"),
+      mRepairListsBtn: document.getElementById("mRepairListsBtn"),
 
       trainBtn: document.getElementById("trainBtn"),
       trainBackdrop: document.getElementById("trainBackdrop"),
@@ -1834,6 +1936,23 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       renderModalList();
       syncStoreSelect();
     });
+
+
+    if (els.mRepairListsBtn){
+      els.mRepairListsBtn.addEventListener("click", () => {
+        const ok = confirm("Obnovit seznam RVE a prodejen podle předlohy? Prodejci na prodejnách zůstanou zachováni.");
+        if (!ok) return;
+        const current = loadLists();
+        const repaired = repairLists(current);
+        if (repaired.fixed){
+          saveLists(repaired.data);
+          lists = loadLists();
+        }
+        renderModalList();
+        syncStoreSelect();
+        alert("Seznam RVE a prodejen byl obnoven.");
+      });
+    }
 
 
     els.trainBtn.addEventListener("click", () => {
