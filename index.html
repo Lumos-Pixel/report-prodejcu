@@ -253,6 +253,7 @@
       max-width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
+
     }
 
     .chipGroup{
@@ -266,6 +267,7 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
+      overflow:hidden;
     }
     .chipGroup .chip{
       box-shadow:none;
@@ -330,6 +332,7 @@
       font-size:13px;
       line-height:1.45;
       white-space:pre-wrap;
+    }
     }
 
     .reportTop{
@@ -534,7 +537,8 @@
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
-        </div>
+        
+      </div>
     </header>
 
     <div class="grid">
@@ -709,13 +713,7 @@
           <button class="btn small danger" id="mClearStoreBtn" type="button">Smazat všechny na prodejně</button>
         </div>
 
-        
-
-        <div class="row" style="justify-content:space-between; margin-top:10px;">
-          <div class="muted">Obnova seznamu</div>
-          <button class="btn small" id="mRepairListsBtn" type="button">Obnovit RVE a prodejny</button>
-        </div>
-<ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
+        <ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
       </div>
     </div>
   </div>
@@ -771,7 +769,7 @@
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const STORAGE_KEY = "reportProdejcuDataV2";
@@ -877,121 +875,46 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
     }
 
-    function seedLists(){
-      return {
+    function loadLists(){
+      const seed = () => ({
         rves: RVE_SEED.map(r => ({
           rve: r.rve,
           stores: r.stores.map(name => ({ name, sellers: [] }))
         }))
-      };
-    }
+      });
 
-    function normalizeLists(obj){
-      if (!obj || !Array.isArray(obj.rves)) return null;
-      const cleaned = { rves: [] };
-
-      for (const r of obj.rves){
-        if (!r || !r.rve) continue;
-        const rveName = String(r.rve).trim();
-        if (!rveName) continue;
-
-        const stores = Array.isArray(r.stores) ? r.stores : [];
-        const cleanedStores = [];
-
-        for (const s of stores){
-          if (!s || !s.name) continue;
-          const storeName = String(s.name).trim();
-          if (!storeName) continue;
-
-          const sellers = Array.isArray(s.sellers) ? s.sellers : [];
-          const cleanedSellers = sellers
-            .map(x => String(x || "").trim())
-            .filter(Boolean);
-
-          cleanedStores.push({ name: storeName, sellers: cleanedSellers });
-        }
-
-        cleaned.rves.push({ rve: rveName, stores: cleanedStores });
-      }
-
-      return cleaned;
-    }
-
-    function repairLists(existing){
-      const base = seedLists();
-      const ex = normalizeLists(existing);
-
-      if (!ex || ex.rves.length === 0){
-        return { fixed: true, data: base };
-      }
-
-      const byRve = new Map(ex.rves.map(r => [r.rve, r]));
-      const fixed = { rves: [] };
-
-      for (const seedR of base.rves){
-        const exR = byRve.get(seedR.rve);
-        if (!exR){
-          fixed.rves.push(seedR);
-          continue;
-        }
-
-        const byStore = new Map((exR.stores || []).map(s => [s.name, s]));
-        const stores = [];
-
-        for (const seedS of seedR.stores){
-          const exS = byStore.get(seedS.name);
-          if (!exS){
-            stores.push(seedS);
-          } else {
-            stores.push({
-              name: seedS.name,
-              sellers: Array.isArray(exS.sellers) ? exS.sellers : []
-            });
-          }
-        }
-
-        // ponech i případné uživatelem přidané prodejny
-        for (const exS of (exR.stores || [])){
-          if (!stores.some(s => s.name === exS.name)){
-            stores.push({
-              name: exS.name,
-              sellers: Array.isArray(exS.sellers) ? exS.sellers : []
-            });
-          }
-        }
-
-        fixed.rves.push({ rve: seedR.rve, stores });
-      }
-
-      // ponech i případné uživatelem přidané RVE
-      for (const exR of ex.rves){
-        if (!fixed.rves.some(r => r.rve === exR.rve)){
-          fixed.rves.push(exR);
-        }
-      }
-
-      const changed = JSON.stringify(ex) !== JSON.stringify(fixed);
-      return { fixed: changed, data: fixed };
-    }
-
-    function loadLists(){
       const raw = localStorage.getItem(LISTS_KEY);
       if (!raw){
-        const seeded = seedLists();
+        const seeded = seed();
         localStorage.setItem(LISTS_KEY, JSON.stringify(seeded));
         return seeded;
       }
 
       const obj = safeJsonParse(raw, null);
-      const repaired = repairLists(obj);
 
-      if (repaired.fixed){
-        localStorage.setItem(LISTS_KEY, JSON.stringify(repaired.data));
+      const isValid = (o) => {
+        if (!o || !Array.isArray(o.rves) || o.rves.length === 0) return false;
+        for (const r of o.rves){
+          if (!r || typeof r.rve !== "string" || !Array.isArray(r.stores) || r.stores.length === 0) return false;
+          for (const s of r.stores){
+            if (!s || typeof s.name !== "string") return false;
+            if (!Array.isArray(s.sellers)) s.sellers = [];
+            s.sellers = s.sellers.filter(x => typeof x === "string" && x.trim());
+          }
+        }
+        return true;
+      };
+
+      if (!isValid(obj)){
+        const seeded = seed();
+        localStorage.setItem(LISTS_KEY, JSON.stringify(seeded));
+        return seeded;
       }
 
-      return repaired.data;
+      return obj;
     }
     function saveLists(lists){
+(lists){
       localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
     }
 
@@ -1181,6 +1104,27 @@
       return bom + lines.join("\r\n");
     }
 
+    function sellersToCsv(listsObj){
+      const header = ["RVE", "Prodejna", "Prodejce"];
+      const lines = [header.map(csvEscape).join(";")];
+
+      for (const r of (listsObj?.rves || [])){
+        for (const s of (r.stores || [])){
+          const sellers = Array.isArray(s.sellers) ? s.sellers : [];
+          if (sellers.length === 0){
+            lines.push([r.rve, s.name, ""].map(csvEscape).join(";"));
+            continue;
+          }
+          for (const seller of sellers.slice().sort((a,b)=>a.localeCompare(b,"cs"))){
+            lines.push([r.rve, s.name, seller].map(csvEscape).join(";"));
+          }
+        }
+      }
+
+      const bom = "\uFEFF";
+      return bom + lines.join("\r\n");
+    }
+
     const els = {
       rve: document.getElementById("rve"),
       store: document.getElementById("store"),
@@ -1222,7 +1166,6 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       mAddBtn: document.getElementById("mAddBtn"),
       mSellerList: document.getElementById("mSellerList"),
       mClearStoreBtn: document.getElementById("mClearStoreBtn"),
-      mRepairListsBtn: document.getElementById("mRepairListsBtn"),
 
       trainBtn: document.getElementById("trainBtn"),
       trainBackdrop: document.getElementById("trainBackdrop"),
@@ -1836,36 +1779,6 @@ kpiCurrent: document.getElementById("kpiCurrent"),
 
       const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
 
-      if (typeof html2canvas !== "function"){
-        alert("Export obrázku není dostupný.");
-        return;
-      }
-
-      html2canvas(node, { backgroundColor: null, scale, useCORS: true }).then((canvas) => {
-        if (canvas.toBlob){
-          canvas.toBlob((blob) => {
-            if (!blob){
-              const dataUrl = canvas.toDataURL("image/png");
-              downloadTextFile(`${buildReportNameBase()}.png`, dataUrl, "image/png");
-              return;
-            }
-            downloadBlobFile(`${buildReportNameBase()}.png`, blob);
-          }, "image/png");
-        } else {
-          const dataUrl = canvas.toDataURL("image/png");
-          const a = document.createElement("a");
-          a.href = dataUrl;
-          a.download = `${buildReportNameBase()}.png`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        }
-      }).catch(() => {
-        alert("Export obrázku se nepovedl.");
-      });
-
-
-
     function init(){
       const rves = lists.rves.map(r => r.rve);
       fillSelect(els.rve, rves, rves[0]);
@@ -1936,23 +1849,6 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       renderModalList();
       syncStoreSelect();
     });
-
-
-    if (els.mRepairListsBtn){
-      els.mRepairListsBtn.addEventListener("click", () => {
-        const ok = confirm("Obnovit seznam RVE a prodejen podle předlohy? Prodejci na prodejnách zůstanou zachováni.");
-        if (!ok) return;
-        const current = loadLists();
-        const repaired = repairLists(current);
-        if (repaired.fixed){
-          saveLists(repaired.data);
-          lists = loadLists();
-        }
-        renderModalList();
-        syncStoreSelect();
-        alert("Seznam RVE a prodejen byl obnoven.");
-      });
-    }
 
 
     els.trainBtn.addEventListener("click", () => {
