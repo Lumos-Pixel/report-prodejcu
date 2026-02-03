@@ -266,7 +266,6 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
-      overflow:hidden;
     }
     .chipGroup .chip{
       box-shadow:none;
@@ -332,6 +331,7 @@
       line-height:1.45;
       white-space:pre-wrap;
     }
+
     .reportTop{
       display:flex;
       gap:12px;
@@ -534,7 +534,7 @@
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
-      </div>
+        </div>
     </header>
 
     <div class="grid">
@@ -709,7 +709,13 @@
           <button class="btn small danger" id="mClearStoreBtn" type="button">Smazat všechny na prodejně</button>
         </div>
 
-        <ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
+        
+
+        <div class="row" style="justify-content:space-between; margin-top:10px;">
+          <div class="muted">Obnova seznamu</div>
+          <button class="btn small" id="mRepairListsBtn" type="button">Obnovit RVE a prodejny</button>
+        </div>
+<ul class="list" id="mSellerList" style="margin-top:10px;"></ul>
       </div>
     </div>
   </div>
@@ -765,7 +771,7 @@
       </div>
     </div>
   </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const STORAGE_KEY = "reportProdejcuDataV2";
@@ -871,83 +877,120 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
     }
 
-    function buildSeededLists(){
-  return {
-    rves: RVE_SEED.map(r => ({
-      rve: r.rve,
-      stores: r.stores.map(name => ({ name, sellers: [] }))
-    }))
-  };
-}
-
-function normalizeLists(obj){
-  if (!obj || !Array.isArray(obj.rves) || obj.rves.length === 0) return null;
-
-  const cleaned = { rves: [] };
-
-  for (const r of obj.rves){
-    const rveName = normText(r?.rve);
-    if (!rveName) continue;
-    const storesIn = Array.isArray(r?.stores) ? r.stores : [];
-    const storesOut = [];
-    for (const s of storesIn){
-      const storeName = normText(s?.name);
-      if (!storeName) continue;
-      const sellers = Array.isArray(s?.sellers) ? s.sellers.map(normText).filter(Boolean) : [];
-      storesOut.push({ name: storeName, sellers: Array.from(new Set(sellers)) });
+    function seedLists(){
+      return {
+        rves: RVE_SEED.map(r => ({
+          rve: r.rve,
+          stores: r.stores.map(name => ({ name, sellers: [] }))
+        }))
+      };
     }
-    cleaned.rves.push({ rve: rveName, stores: storesOut });
-  }
 
-  if (cleaned.rves.length === 0) return null;
-  return cleaned;
-}
+    function normalizeLists(obj){
+      if (!obj || !Array.isArray(obj.rves)) return null;
+      const cleaned = { rves: [] };
 
-function mergeSellersIntoSeed(seed, existing){
-  const map = new Map();
-  for (const r of existing.rves){
-    for (const s of (r.stores || [])){
-      const key = r.rve + "||" + s.name;
-      map.set(key, Array.isArray(s.sellers) ? s.sellers : []);
+      for (const r of obj.rves){
+        if (!r || !r.rve) continue;
+        const rveName = String(r.rve).trim();
+        if (!rveName) continue;
+
+        const stores = Array.isArray(r.stores) ? r.stores : [];
+        const cleanedStores = [];
+
+        for (const s of stores){
+          if (!s || !s.name) continue;
+          const storeName = String(s.name).trim();
+          if (!storeName) continue;
+
+          const sellers = Array.isArray(s.sellers) ? s.sellers : [];
+          const cleanedSellers = sellers
+            .map(x => String(x || "").trim())
+            .filter(Boolean);
+
+          cleanedStores.push({ name: storeName, sellers: cleanedSellers });
+        }
+
+        cleaned.rves.push({ rve: rveName, stores: cleanedStores });
+      }
+
+      return cleaned;
     }
-  }
 
-  for (const r of seed.rves){
-    for (const s of r.stores){
-      const key = r.rve + "||" + s.name;
-      if (!map.has(key)) continue;
-      const sellers = map.get(key).map(normText).filter(Boolean);
-      s.sellers = Array.from(new Set(sellers));
+    function repairLists(existing){
+      const base = seedLists();
+      const ex = normalizeLists(existing);
+
+      if (!ex || ex.rves.length === 0){
+        return { fixed: true, data: base };
+      }
+
+      const byRve = new Map(ex.rves.map(r => [r.rve, r]));
+      const fixed = { rves: [] };
+
+      for (const seedR of base.rves){
+        const exR = byRve.get(seedR.rve);
+        if (!exR){
+          fixed.rves.push(seedR);
+          continue;
+        }
+
+        const byStore = new Map((exR.stores || []).map(s => [s.name, s]));
+        const stores = [];
+
+        for (const seedS of seedR.stores){
+          const exS = byStore.get(seedS.name);
+          if (!exS){
+            stores.push(seedS);
+          } else {
+            stores.push({
+              name: seedS.name,
+              sellers: Array.isArray(exS.sellers) ? exS.sellers : []
+            });
+          }
+        }
+
+        // ponech i případné uživatelem přidané prodejny
+        for (const exS of (exR.stores || [])){
+          if (!stores.some(s => s.name === exS.name)){
+            stores.push({
+              name: exS.name,
+              sellers: Array.isArray(exS.sellers) ? exS.sellers : []
+            });
+          }
+        }
+
+        fixed.rves.push({ rve: seedR.rve, stores });
+      }
+
+      // ponech i případné uživatelem přidané RVE
+      for (const exR of ex.rves){
+        if (!fixed.rves.some(r => r.rve === exR.rve)){
+          fixed.rves.push(exR);
+        }
+      }
+
+      const changed = JSON.stringify(ex) !== JSON.stringify(fixed);
+      return { fixed: changed, data: fixed };
     }
-  }
-  return seed;
-}
 
-function loadLists(){
-  const raw = localStorage.getItem(LISTS_KEY);
+    function loadLists(){
+      const raw = localStorage.getItem(LISTS_KEY);
+      if (!raw){
+        const seeded = seedLists();
+        localStorage.setItem(LISTS_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
 
-  const seededBase = buildSeededLists();
+      const obj = safeJsonParse(raw, null);
+      const repaired = repairLists(obj);
 
-  if (!raw){
-    localStorage.setItem(LISTS_KEY, JSON.stringify(seededBase));
-    return seededBase;
-  }
+      if (repaired.fixed){
+        localStorage.setItem(LISTS_KEY, JSON.stringify(repaired.data));
+      }
 
-  const parsed = safeJsonParse(raw, null);
-  const normalized = normalizeLists(parsed);
-
-  if (!normalized){
-    localStorage.setItem(LISTS_KEY, JSON.stringify(seededBase));
-    return seededBase;
-  }
-
-  // Pokud existují nějaké prodejny a RVE, ale seed se mezitím změnil,
-  // držíme se seed struktury a zachováme prodejce tam, kde sedí RVE a prodejna.
-  const merged = mergeSellersIntoSeed(buildSeededLists(), normalized);
-  localStorage.setItem(LISTS_KEY, JSON.stringify(merged));
-  return merged;
-}
-
+      return repaired.data;
+    }
     function saveLists(lists){
       localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
     }
@@ -1137,15 +1180,6 @@ function loadLists(){
       const bom = "\uFEFF";
       return bom + lines.join("\r\n");
     }
-          for (const seller of sellers.slice().sort((a,b)=>a.localeCompare(b,"cs"))){
-            lines.push([r.rve, s.name, seller].map(csvEscape).join(";"));
-          }
-        }
-      }
-
-      const bom = "\uFEFF";
-      return bom + lines.join("\r\n");
-    }
 
     const els = {
       rve: document.getElementById("rve"),
@@ -1162,9 +1196,8 @@ function loadLists(){
       refreshBtn: document.getElementById("refreshBtn"),
 
       exportRowsBtn: document.getElementById("exportRowsBtn"),
-      exportImageBtn: document.getElementById("exportImageBtn"),
-
-      kpiCurrent: document.getElementById("kpiCurrent"),
+exportImageBtn: document.getElementById("exportImageBtn"),
+kpiCurrent: document.getElementById("kpiCurrent"),
       kpiPrev: document.getElementById("kpiPrev"),
       kpiChange: document.getElementById("kpiChange"),
 
@@ -1189,6 +1222,7 @@ function loadLists(){
       mAddBtn: document.getElementById("mAddBtn"),
       mSellerList: document.getElementById("mSellerList"),
       mClearStoreBtn: document.getElementById("mClearStoreBtn"),
+      mRepairListsBtn: document.getElementById("mRepairListsBtn"),
 
       trainBtn: document.getElementById("trainBtn"),
       trainBackdrop: document.getElementById("trainBackdrop"),
@@ -1829,51 +1863,7 @@ function loadLists(){
       }).catch(() => {
         alert("Export obrázku se nepovedl.");
       });
-    }
 
-      if (typeof html2canvas !== "function"){
-        alert("Export PDF není dostupný.");
-        return;
-      }
-      const hasJsPdf = (window.jspdf && window.jspdf.jsPDF);
-      if (!hasJsPdf){
-        alert("Export PDF není dostupný.");
-        return;
-      }
-
-      const base = buildReportNameBase();
-
-      const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-
-      html2canvas(node, { backgroundColor: null, scale, useCORS: true }).then((canvas) => {
-        const imgData = canvas.toDataURL("image/png");
-
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-
-        const margin = 28;
-        const maxW = pageW - margin*2;
-        const maxH = pageH - margin*2;
-
-        const imgW = canvas.width;
-        const imgH = canvas.height;
-
-        const ratio = Math.min(maxW / imgW, maxH / imgH);
-        const drawW = imgW * ratio;
-        const drawH = imgH * ratio;
-
-        const x = (pageW - drawW) / 2;
-        const y = (pageH - drawH) / 2;
-
-        pdf.addImage(imgData, "PNG", x, y, drawW, drawH, undefined, "FAST");
-        pdf.save(`${base}.pdf`);
-      }).catch(() => {
-        alert("Export PDF se nepovedl.");
-      });
-    }
 
 
     function init(){
@@ -1946,6 +1936,23 @@ function loadLists(){
       renderModalList();
       syncStoreSelect();
     });
+
+
+    if (els.mRepairListsBtn){
+      els.mRepairListsBtn.addEventListener("click", () => {
+        const ok = confirm("Obnovit seznam RVE a prodejen podle předlohy? Prodejci na prodejnách zůstanou zachováni.");
+        if (!ok) return;
+        const current = loadLists();
+        const repaired = repairLists(current);
+        if (repaired.fixed){
+          saveLists(repaired.data);
+          lists = loadLists();
+        }
+        renderModalList();
+        syncStoreSelect();
+        alert("Seznam RVE a prodejen byl obnoven.");
+      });
+    }
 
 
     els.trainBtn.addEventListener("click", () => {
