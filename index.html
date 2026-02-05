@@ -266,7 +266,6 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
-      overflow:hidden;
     }
     .chipGroup .chip{
       box-shadow:none;
@@ -525,6 +524,11 @@
     }
 
 
+  /* Skryté exporty dle zadání */
+#exportSellersBtn,
+#exportPdfBtn{
+  display:none !important;
+}
   </style>
 </head>
 
@@ -535,7 +539,7 @@
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
-      </div>
+        </div>
     </header>
 
     <div class="grid">
@@ -1080,15 +1084,6 @@
       const bom = "\uFEFF";
       return bom + lines.join("\r\n");
     }
-          for (const seller of sellers.slice().sort((a,b)=>a.localeCompare(b,"cs"))){
-            lines.push([r.rve, s.name, seller].map(csvEscape).join(";"));
-          }
-        }
-      }
-
-      const bom = "\uFEFF";
-      return bom + lines.join("\r\n");
-    }
 
     const els = {
       rve: document.getElementById("rve"),
@@ -1105,9 +1100,8 @@
       refreshBtn: document.getElementById("refreshBtn"),
 
       exportRowsBtn: document.getElementById("exportRowsBtn"),
-      exportImageBtn: document.getElementById("exportImageBtn"),
-
-      kpiCurrent: document.getElementById("kpiCurrent"),
+exportImageBtn: document.getElementById("exportImageBtn"),
+kpiCurrent: document.getElementById("kpiCurrent"),
       kpiPrev: document.getElementById("kpiPrev"),
       kpiChange: document.getElementById("kpiChange"),
 
@@ -1745,6 +1739,36 @@
 
       const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
 
+      if (typeof html2canvas !== "function"){
+        alert("Export obrázku není dostupný.");
+        return;
+      }
+
+      html2canvas(node, { backgroundColor: null, scale, useCORS: true }).then((canvas) => {
+        if (canvas.toBlob){
+          canvas.toBlob((blob) => {
+            if (!blob){
+              const dataUrl = canvas.toDataURL("image/png");
+              downloadTextFile(`${buildReportNameBase()}.png`, dataUrl, "image/png");
+              return;
+            }
+            downloadBlobFile(`${buildReportNameBase()}.png`, blob);
+          }, "image/png");
+        } else {
+          const dataUrl = canvas.toDataURL("image/png");
+          const a = document.createElement("a");
+          a.href = dataUrl;
+          a.download = `${buildReportNameBase()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+      }).catch(() => {
+        alert("Export obrázku se nepovedl.");
+      });
+
+
+
     function init(){
       const rves = lists.rves.map(r => r.rve);
       fillSelect(els.rve, rves, rves[0]);
@@ -1842,7 +1866,7 @@
 
 
     els.exportRowsBtn.addEventListener("click", exportRowsCsv);
-    els.exportImageBtn.addEventListener("click", exportReportImage);
-  </script>
+els.exportImageBtn.addEventListener("click", exportReportImage);
+</script>
 </body>
 </html>
