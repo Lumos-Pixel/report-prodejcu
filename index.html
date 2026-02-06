@@ -512,8 +512,8 @@
         max-width:100%;
       }
       input[type="date"]{
-        -webkit-appearance: none;
-        appearance: none;
+        -webkit-appearance: auto;
+        appearance: auto;
       }
     }
     .footerNote{
@@ -577,6 +577,31 @@
           <button class="btn" id="trainBtn" type="button">Zapsat trénink</button>
           <button class="btn ghost" id="clearBtn" type="button">Smazat všechna data</button>
         </div>
+
+
+
+          <details id="detailsRows" style="margin-top:12px;">
+            <summary>Záznamy v období</summary>
+            <div style="overflow:auto; margin-top:10px;">
+              <table class="miniTable" id="tbl">
+                <thead>
+                  <tr class="muted">
+                    <td>Datum</td>
+                    <td>Prodejce</td>
+                    <td>Prodejna</td>
+                    <td>Hodnota</td>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="trainWrap">
+              <div class="trainTitle">Tréninky v období</div>
+              <div class="trainList" id="trainList"></div>
+            </div>
+          </details>
+
       </div>
 
       <div>
@@ -599,7 +624,6 @@
                 <span class="chip" id="chipRve">RVE</span>
                 <span class="chipGroup" id="chipTrainGroup">
                   <span class="chip" id="chipTrainTotal">Trénink celkem 0 h</span>
-                <span class="chip" id="chipTrainAvg">Průměr na trénink 0 h</span>
                 <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
                 </span>
               </div>
@@ -643,28 +667,6 @@
           <canvas id="chart"></canvas>
 
           <div class="hr"></div>
-
-          <details id="detailsRows">
-            <summary>Záznamy v období</summary>
-            <div style="overflow:auto; margin-top:10px;">
-              <table class="miniTable" id="tbl">
-                <thead>
-                  <tr class="muted">
-                    <td>Datum</td>
-                    <td>Prodejce</td>
-                    <td>Prodejna</td>
-                    <td>Hodnota</td>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-
-            <div class="trainWrap">
-              <div class="trainTitle">Tréninky v období</div>
-              <div class="trainList" id="trainList"></div>
-            </div>
-          </details>
 
         </div>
       </div>
@@ -1112,7 +1114,6 @@
       chipStore: document.getElementById("chipStore"),
       chipRve: document.getElementById("chipRve"),
       chipTrainTotal: document.getElementById("chipTrainTotal"),
-      chipTrainAvg: document.getElementById("chipTrainAvg"),
       chipTrainCount: document.getElementById("chipTrainCount"),
 
       avatarIni: document.getElementById("avatarIni"),
@@ -1220,7 +1221,6 @@
       const hasSeller = Boolean(els.seller.value);
       if (!hasSeller){
         els.chipTrainTotal.textContent = "Trénink celkem 0 h";
-        els.chipTrainAvg.textContent = "Průměr na trénink 0 h";
         els.chipTrainCount.textContent = "Počet tréninků 0";
         return;
       }
@@ -1228,10 +1228,8 @@
       const allItems = trainingForSeller(currentRve(), currentStore(), els.seller.value);
       const total = sumTraining(allItems);
       const count = allItems.length;
-      const avg = count ? (total / count) : 0;
 
       els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
-      els.chipTrainAvg.textContent = `Průměr na trénink ${formatHours(avg)} h`;
       els.chipTrainCount.textContent = `Počet tréninků ${count}`;
 
     }
