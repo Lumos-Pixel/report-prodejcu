@@ -254,6 +254,8 @@
       overflow:hidden;
       text-overflow:ellipsis;
 
+    }
+
     .chipGroup{
       display:inline-flex;
       align-items:center;
@@ -511,10 +513,28 @@
       .field input,.field select,.field textarea{
         max-width:100%;
       }
-      input[type="date"]{
-        -webkit-appearance: auto;
-        appearance: auto;
+      .field input[type="date"]{
+        -webkit-appearance:auto;
+        appearance:auto;
+        min-height:46px;
       }
+      /* Mobil: čipsy bez přesahů */
+      #chipTrainGroup{
+        display:flex;
+        flex-direction:column;
+        align-items:stretch;
+        gap:8px;
+        padding:0;
+        border:0;
+        background:transparent;
+        box-shadow:none;
+      }
+      #chipTrainGroup .chip{
+        width:100%;
+        justify-content:center;
+        white-space:nowrap;
+      }
+
     }
     .footerNote{
       margin-top:18px;
@@ -534,7 +554,9 @@
       <h1>Report prodejců</h1>
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
+        <button class="btn ghost" id="exportSellersBtn" type="button">Export do Excelu prodejci</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
+        <button class="btn ghost" id="exportPdfBtn" type="button">Export PDF reportu</button>
       </div>
     </header>
 
@@ -577,31 +599,6 @@
           <button class="btn" id="trainBtn" type="button">Zapsat trénink</button>
           <button class="btn ghost" id="clearBtn" type="button">Smazat všechna data</button>
         </div>
-
-
-
-          <details id="detailsRows" style="margin-top:12px;">
-            <summary>Záznamy v období</summary>
-            <div style="overflow:auto; margin-top:10px;">
-              <table class="miniTable" id="tbl">
-                <thead>
-                  <tr class="muted">
-                    <td>Datum</td>
-                    <td>Prodejce</td>
-                    <td>Prodejna</td>
-                    <td>Hodnota</td>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-
-            <div class="trainWrap">
-              <div class="trainTitle">Tréninky v období</div>
-              <div class="trainList" id="trainList"></div>
-            </div>
-          </details>
-
       </div>
 
       <div>
@@ -624,7 +621,7 @@
                 <span class="chip" id="chipRve">RVE</span>
                 <span class="chipGroup" id="chipTrainGroup">
                   <span class="chip" id="chipTrainTotal">Trénink celkem 0 h</span>
-                <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
+                                <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
                 </span>
               </div>
             </div>
@@ -667,6 +664,28 @@
           <canvas id="chart"></canvas>
 
           <div class="hr"></div>
+
+          <details id="detailsRows">
+            <summary>Záznamy v období</summary>
+            <div style="overflow:auto; margin-top:10px;">
+              <table class="miniTable" id="tbl">
+                <thead>
+                  <tr class="muted">
+                    <td>Datum</td>
+                    <td>Prodejce</td>
+                    <td>Prodejna</td>
+                    <td>Hodnota</td>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="trainWrap">
+              <div class="trainTitle">Tréninky v období</div>
+              <div class="trainList" id="trainList"></div>
+            </div>
+          </details>
 
         </div>
       </div>
@@ -768,6 +787,9 @@
       </div>
     </div>
   </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
@@ -1083,7 +1105,26 @@
       return bom + lines.join("\r\n");
     }
 
-    
+    function sellersToCsv(listsObj){
+      const header = ["RVE", "Prodejna", "Prodejce"];
+      const lines = [header.map(csvEscape).join(";")];
+
+      for (const r of (listsObj?.rves || [])){
+        for (const s of (r.stores || [])){
+          const sellers = Array.isArray(s.sellers) ? s.sellers : [];
+          if (sellers.length === 0){
+            lines.push([r.rve, s.name, ""].map(csvEscape).join(";"));
+            continue;
+          }
+          for (const seller of sellers.slice().sort((a,b)=>a.localeCompare(b,"cs"))){
+            lines.push([r.rve, s.name, seller].map(csvEscape).join(";"));
+          }
+        }
+      }
+
+      const bom = "\uFEFF";
+      return bom + lines.join("\r\n");
+    }
 
     const els = {
       rve: document.getElementById("rve"),
@@ -1100,7 +1141,9 @@
       refreshBtn: document.getElementById("refreshBtn"),
 
       exportRowsBtn: document.getElementById("exportRowsBtn"),
+      exportSellersBtn: document.getElementById("exportSellersBtn"),
       exportImageBtn: document.getElementById("exportImageBtn"),
+      exportPdfBtn: document.getElementById("exportPdfBtn"),
 
       kpiCurrent: document.getElementById("kpiCurrent"),
       kpiPrev: document.getElementById("kpiPrev"),
@@ -1228,6 +1271,7 @@
       const allItems = trainingForSeller(currentRve(), currentStore(), els.seller.value);
       const total = sumTraining(allItems);
       const count = allItems.length;
+      const avg = count ? (total / count) : 0;
 
       els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
       els.chipTrainCount.textContent = `Počet tréninků ${count}`;
@@ -1725,7 +1769,13 @@
       downloadTextFile(`export_excel_zaznamy_${stamp}.csv`, csv, "text/csv;charset=utf-8");
     }
 
-    
+    function exportSellersCsv(){
+      const obj = loadLists();
+      const csv = sellersToCsv(obj);
+      const ts = new Date();
+      const stamp = `${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,"0")}${String(ts.getDate()).padStart(2,"0")}_${String(ts.getHours()).padStart(2,"0")}${String(ts.getMinutes()).padStart(2,"0")}`;
+      downloadTextFile(`export_excel_prodejci_${stamp}.csv`, csv, "text/csv;charset=utf-8");
+    }
 
     function exportReportImage(){
       const node = document.getElementById("reportCard");
@@ -1767,7 +1817,56 @@
       });
     }
 
-    
+    function exportReportPdf(){
+      const node = document.getElementById("reportCard");
+      if (!node){
+        alert("Report nenalezen.");
+        return;
+      }
+
+      if (typeof html2canvas !== "function"){
+        alert("Export PDF není dostupný.");
+        return;
+      }
+      const hasJsPdf = (window.jspdf && window.jspdf.jsPDF);
+      if (!hasJsPdf){
+        alert("Export PDF není dostupný.");
+        return;
+      }
+
+      const base = buildReportNameBase();
+
+      const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+
+      html2canvas(node, { backgroundColor: null, scale, useCORS: true }).then((canvas) => {
+        const imgData = canvas.toDataURL("image/png");
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+
+        const margin = 28;
+        const maxW = pageW - margin*2;
+        const maxH = pageH - margin*2;
+
+        const imgW = canvas.width;
+        const imgH = canvas.height;
+
+        const ratio = Math.min(maxW / imgW, maxH / imgH);
+        const drawW = imgW * ratio;
+        const drawH = imgH * ratio;
+
+        const x = (pageW - drawW) / 2;
+        const y = (pageH - drawH) / 2;
+
+        pdf.addImage(imgData, "PNG", x, y, drawW, drawH, undefined, "FAST");
+        pdf.save(`${base}.pdf`);
+      }).catch(() => {
+        alert("Export PDF se nepovedl.");
+      });
+    }
 
 
     function init(){
@@ -1867,7 +1966,9 @@
 
 
     els.exportRowsBtn.addEventListener("click", exportRowsCsv);
-els.exportImageBtn.addEventListener("click", exportReportImage);
-</script>
+    els.exportSellersBtn.addEventListener("click", exportSellersCsv);
+    els.exportImageBtn.addEventListener("click", exportReportImage);
+    els.exportPdfBtn.addEventListener("click", exportReportPdf);
+  </script>
 </body>
 </html>
