@@ -253,6 +253,7 @@
       max-width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
+    }
 
     .chipGroup{
       display:inline-flex;
@@ -265,7 +266,6 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
-      overflow:hidden;
     }
     .chipGroup .chip{
       box-shadow:none;
@@ -330,7 +330,6 @@
       font-size:13px;
       line-height:1.45;
       white-space:pre-wrap;
-    }
     }
 
     .reportTop{
@@ -511,9 +510,28 @@
       .field input,.field select,.field textarea{
         max-width:100%;
       }
+
+      /* Mobil: čipsy se nesmí slepovat ani přetékat */
+      .reportTop .row{
+        flex-wrap:wrap;
+        align-items:flex-start;
+        gap:8px;
+      }
+      .chipGroup{
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        max-width:100%;
+      }
+      .chip{
+        max-width:100%;
+      }
+
+      /* iOS Safari: date input občas spadne na úzký pruh, vynutíme výšku */
       input[type="date"]{
-        -webkit-appearance: none;
-        appearance: none;
+        min-height:46px;
+        height:46px;
+        box-sizing:border-box;
       }
     }
     .footerNote{
@@ -535,7 +553,7 @@
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
-      </div>
+        </div>
     </header>
 
     <div class="grid">
@@ -599,7 +617,6 @@
                 <span class="chip" id="chipRve">RVE</span>
                 <span class="chipGroup" id="chipTrainGroup">
                   <span class="chip" id="chipTrainTotal">Trénink celkem 0 h</span>
-                <span class="chip" id="chipTrainAvg">Průměr na trénink 0 h</span>
                 <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
                 </span>
               </div>
@@ -1081,8 +1098,6 @@
       return bom + lines.join("\r\n");
     }
 
-    
-
     const els = {
       rve: document.getElementById("rve"),
       store: document.getElementById("store"),
@@ -1098,9 +1113,8 @@
       refreshBtn: document.getElementById("refreshBtn"),
 
       exportRowsBtn: document.getElementById("exportRowsBtn"),
-      exportImageBtn: document.getElementById("exportImageBtn"),
-
-      kpiCurrent: document.getElementById("kpiCurrent"),
+exportImageBtn: document.getElementById("exportImageBtn"),
+kpiCurrent: document.getElementById("kpiCurrent"),
       kpiPrev: document.getElementById("kpiPrev"),
       kpiChange: document.getElementById("kpiChange"),
 
@@ -1112,7 +1126,6 @@
       chipStore: document.getElementById("chipStore"),
       chipRve: document.getElementById("chipRve"),
       chipTrainTotal: document.getElementById("chipTrainTotal"),
-      chipTrainAvg: document.getElementById("chipTrainAvg"),
       chipTrainCount: document.getElementById("chipTrainCount"),
 
       avatarIni: document.getElementById("avatarIni"),
@@ -1220,7 +1233,6 @@
       const hasSeller = Boolean(els.seller.value);
       if (!hasSeller){
         els.chipTrainTotal.textContent = "Trénink celkem 0 h";
-        els.chipTrainAvg.textContent = "Průměr na trénink 0 h";
         els.chipTrainCount.textContent = "Počet tréninků 0";
         return;
       }
@@ -1228,10 +1240,7 @@
       const allItems = trainingForSeller(currentRve(), currentStore(), els.seller.value);
       const total = sumTraining(allItems);
       const count = allItems.length;
-      const avg = count ? (total / count) : 0;
-
       els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
-      els.chipTrainAvg.textContent = `Průměr na trénink ${formatHours(avg)} h`;
       els.chipTrainCount.textContent = `Počet tréninků ${count}`;
 
     }
@@ -1727,8 +1736,6 @@
       downloadTextFile(`export_excel_zaznamy_${stamp}.csv`, csv, "text/csv;charset=utf-8");
     }
 
-    
-
     function exportReportImage(){
       const node = document.getElementById("reportCard");
       if (!node){
@@ -1767,9 +1774,7 @@
       }).catch(() => {
         alert("Export obrázku se nepovedl.");
       });
-    }
 
-    
 
 
     function init(){
