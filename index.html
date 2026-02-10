@@ -253,8 +253,7 @@
       max-width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
-
-        }
+    }
 
     .chipGroup{
       display:inline-flex;
@@ -267,7 +266,6 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
-      overflow:hidden;
     }
     .chipGroup .chip{
       box-shadow:none;
@@ -332,7 +330,6 @@
       font-size:13px;
       line-height:1.45;
       white-space:pre-wrap;
-    }
     }
 
     .reportTop{
@@ -528,25 +525,32 @@
 
 
   
-    /* Mobilní opravy: čipsy a datum v iOS */
+    /* Mobilní opravy: čipsy a datum (bez zásahu do logiky) */
+    #chipTrainAvg{ display:none; }
+
     @media (max-width: 520px){
-      /* čipsy se nesmí roztahovat mimo kartu */
-      .row{ gap:8px; }
-      #chipTrainGroup{ max-width:100%; overflow:visible; }
-      #chipTrainTotal, #chipTrainCount, #chipTrainAvg{ 
-        flex: 1 1 100%;
-        justify-content:center;
-        text-align:center;
-        white-space:normal;
+      /* Čipsy v reportu: žádný přesah, hezké zalomení */
+      #chipTrainGroup{
+        width:100%;
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        padding:6px 8px;
       }
-      .chip{ white-space:normal; }
-      /* iOS Safari: date input nesmí být úzký pruh */
-      input[type="date"]{
-        height:44px;
+      #chipTrainGroup .chip{ max-width:100%; }
+      .chip{ max-width:100%; }
+
+      /* iOS/Safari date input: stabilní výška a zobrazení */
+      .field input[type="date"]{
         min-height:44px;
-        line-height:44px;
-        -webkit-appearance: auto;
-        appearance: auto;
+        -webkit-appearance:none;
+        appearance:none;
+      }
+      .field input[type="date"]::-webkit-date-and-time-value{
+        text-align:left;
+      }
+      .field input[type="date"]::-webkit-calendar-picker-indicator{
+        opacity:.85;
       }
     }
 
@@ -560,7 +564,7 @@
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
-      </div>
+        </div>
     </header>
 
     <div class="grid">
@@ -914,12 +918,6 @@
         localStorage.removeItem(LISTS_KEY);
         return loadLists();
       }
-      // Když jsou seznamy prázdné nebo rozbité obsahově, obnov seed
-      const bad = obj.rves.length === 0 || obj.rves.some(r => !r || typeof r.rve !== "string" || !Array.isArray(r.stores) || r.stores.length === 0 || r.stores.some(s => !s || typeof s.name !== "string"));
-      if (bad){
-        localStorage.removeItem(LISTS_KEY);
-        return loadLists();
-      }
       return obj;
     }
     function saveLists(lists){
@@ -1112,8 +1110,6 @@
       return bom + lines.join("\r\n");
     }
 
-    
-
     const els = {
       rve: document.getElementById("rve"),
       store: document.getElementById("store"),
@@ -1129,9 +1125,8 @@
       refreshBtn: document.getElementById("refreshBtn"),
 
       exportRowsBtn: document.getElementById("exportRowsBtn"),
-      exportImageBtn: document.getElementById("exportImageBtn"),
-
-      kpiCurrent: document.getElementById("kpiCurrent"),
+exportImageBtn: document.getElementById("exportImageBtn"),
+kpiCurrent: document.getElementById("kpiCurrent"),
       kpiPrev: document.getElementById("kpiPrev"),
       kpiChange: document.getElementById("kpiChange"),
 
@@ -1758,8 +1753,6 @@
       downloadTextFile(`export_excel_zaznamy_${stamp}.csv`, csv, "text/csv;charset=utf-8");
     }
 
-    
-
     function exportReportImage(){
       const node = document.getElementById("reportCard");
       if (!node){
@@ -1798,9 +1791,7 @@
       }).catch(() => {
         alert("Export obrázku se nepovedl.");
       });
-    }
 
-    
 
 
     function init(){
