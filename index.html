@@ -253,10 +253,24 @@
       max-width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
-    }
 
-    .chipGroup{
+    .chip{
       display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.08);
+      color:rgba(255,255,255,.86);
+      font-size:12.5px;
+      box-shadow:var(--shadowSoft);
+      white-space:nowrap;
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chipGroup{
+      display:flex;
       align-items:center;
       gap:8px;
       flex-wrap:wrap;
@@ -266,7 +280,9 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
+      overflow:visible;
     }
+
     .chipGroup .chip{
       box-shadow:none;
       border-color:rgba(255,255,255,.14);
@@ -330,6 +346,7 @@
       font-size:13px;
       line-height:1.45;
       white-space:pre-wrap;
+    }
     }
 
     .reportTop{
@@ -524,37 +541,7 @@
     }
 
 
-  
-    /* Mobilní opravy: čipsy a datum (bez zásahu do logiky) */
-    #chipTrainAvg{ display:none; }
-
-    @media (max-width: 520px){
-      /* Čipsy v reportu: žádný přesah, hezké zalomení */
-      #chipTrainGroup{
-        width:100%;
-        display:flex;
-        flex-wrap:wrap;
-        gap:8px;
-        padding:6px 8px;
-      }
-      #chipTrainGroup .chip{ max-width:100%; }
-      .chip{ max-width:100%; }
-
-      /* iOS/Safari date input: stabilní výška a zobrazení */
-      .field input[type="date"]{
-        min-height:44px;
-        -webkit-appearance:none;
-        appearance:none;
-      }
-      .field input[type="date"]::-webkit-date-and-time-value{
-        text-align:left;
-      }
-      .field input[type="date"]::-webkit-calendar-picker-indicator{
-        opacity:.85;
-      }
-    }
-
-</style>
+  </style>
 </head>
 
 <body>
@@ -564,7 +551,7 @@
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
-        </div>
+      </div>
     </header>
 
     <div class="grid">
@@ -628,8 +615,7 @@
                 <span class="chip" id="chipRve">RVE</span>
                 <span class="chipGroup" id="chipTrainGroup">
                   <span class="chip" id="chipTrainTotal">Trénink celkem 0 h</span>
-                <span class="chip" id="chipTrainAvg">Průměr na trénink 0 h</span>
-                <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
+<span class="chip" id="chipTrainCount">Počet tréninků 0</span>
                 </span>
               </div>
             </div>
@@ -1110,6 +1096,8 @@
       return bom + lines.join("\r\n");
     }
 
+    
+
     const els = {
       rve: document.getElementById("rve"),
       store: document.getElementById("store"),
@@ -1125,8 +1113,9 @@
       refreshBtn: document.getElementById("refreshBtn"),
 
       exportRowsBtn: document.getElementById("exportRowsBtn"),
-exportImageBtn: document.getElementById("exportImageBtn"),
-kpiCurrent: document.getElementById("kpiCurrent"),
+      exportImageBtn: document.getElementById("exportImageBtn"),
+
+      kpiCurrent: document.getElementById("kpiCurrent"),
       kpiPrev: document.getElementById("kpiPrev"),
       kpiChange: document.getElementById("kpiChange"),
 
@@ -1137,9 +1126,7 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       chipSeller: document.getElementById("chipSeller"),
       chipStore: document.getElementById("chipStore"),
       chipRve: document.getElementById("chipRve"),
-      chipTrainTotal: document.getElementById("chipTrainTotal"),
-      chipTrainAvg: document.getElementById("chipTrainAvg"),
-      chipTrainCount: document.getElementById("chipTrainCount"),
+      chipTrainTotal: document.getElementById("chipTrainTotal"),      chipTrainCount: document.getElementById("chipTrainCount"),
 
       avatarIni: document.getElementById("avatarIni"),
 
@@ -1245,9 +1232,7 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       
       const hasSeller = Boolean(els.seller.value);
       if (!hasSeller){
-        els.chipTrainTotal.textContent = "Trénink celkem 0 h";
-        els.chipTrainAvg.textContent = "Průměr na trénink 0 h";
-        els.chipTrainCount.textContent = "Počet tréninků 0";
+        els.chipTrainTotal.textContent = "Trénink celkem 0 h";        els.chipTrainCount.textContent = "Počet tréninků 0";
         return;
       }
 
@@ -1256,9 +1241,7 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       const count = allItems.length;
       const avg = count ? (total / count) : 0;
 
-      els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
-      els.chipTrainAvg.textContent = `Průměr na trénink ${formatHours(avg)} h`;
-      els.chipTrainCount.textContent = `Počet tréninků ${count}`;
+      els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;      els.chipTrainCount.textContent = `Počet tréninků ${count}`;
 
     }
 
@@ -1753,6 +1736,8 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       downloadTextFile(`export_excel_zaznamy_${stamp}.csv`, csv, "text/csv;charset=utf-8");
     }
 
+    
+
     function exportReportImage(){
       const node = document.getElementById("reportCard");
       if (!node){
@@ -1791,7 +1776,9 @@ kpiCurrent: document.getElementById("kpiCurrent"),
       }).catch(() => {
         alert("Export obrázku se nepovedl.");
       });
+    }
 
+    
 
 
     function init(){
@@ -1895,3 +1882,21 @@ els.exportImageBtn.addEventListener("click", exportReportImage);
 </script>
 </body>
 </html>
+    /* iOS Safari: date input může vypadat jako tenký pruh dokud není focus */
+    input[type="date"]{
+      min-height:46px;
+    }
+    @supports (-webkit-touch-callout:none){
+      input[type="date"]{
+        -webkit-appearance:none;
+        appearance:none;
+      }
+      input[type="date"]::-webkit-date-and-time-value{
+        line-height:1.2;
+      }
+      input[type="date"]::-webkit-datetime-edit{
+        padding:0;
+      }
+    }
+
+
