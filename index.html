@@ -254,23 +254,8 @@
       overflow:hidden;
       text-overflow:ellipsis;
 
-    .chip{
-      display:inline-flex;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.08);
-      color:rgba(255,255,255,.86);
-      font-size:12.5px;
-      box-shadow:var(--shadowSoft);
-      white-space:nowrap;
-      max-width:100%;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
     .chipGroup{
-      display:flex;
+      display:inline-flex;
       align-items:center;
       gap:8px;
       flex-wrap:wrap;
@@ -280,8 +265,41 @@
       background:rgba(255,255,255,.04);
       box-shadow:var(--shadowSoft);
       max-width:100%;
-      overflow:visible;
+      overflow:hidden;
     }
+
+    /* Mobil: čipsy v REPORTu se musí zalamovat a nesmí přetékat */
+    .chipGroup{ display:flex; flex-wrap:wrap; gap:10px; min-width:0; }
+    .chipGroup .chip{ max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    @media (max-width:520px){
+      .row{ flex-wrap:wrap; }
+      .chip{ max-width:100%; }
+      .chipGroup{ width:100%; }
+      .chipGroup .chip{ flex:1 1 auto; }
+    }
+
+    /* iOS Safari: date input může vypadat jako tenký pruh dokud není focus */
+    input[type="date"]{
+      min-height:46px;
+      height:46px;
+      padding-top:0;
+      padding-bottom:0;
+      line-height:46px;
+    }
+    @supports (-webkit-touch-callout:none){
+      input[type="date"]{
+        -webkit-appearance:none;
+        appearance:none;
+      }
+      input[type="date"]::-webkit-date-and-time-value{
+        line-height:46px;
+      }
+    }
+
+    /* Skrytí nápověd v polích (placeholder), necháváme jen textarea Poznámka */
+    input::placeholder{ color: transparent; }
+    textarea::placeholder{ color: rgba(244,246,251,.55); }
 
     .chipGroup .chip{
       box-shadow:none;
@@ -583,7 +601,7 @@
           </div>
           <div class="field" style="flex:1; min-width:160px;">
             <label for="value">Podíl na tržbě s DPH (služby)</label>
-            <input id="value" type="text" inputmode="decimal" placeholder="10,9" />
+            <input id="value" type="text" inputmode="decimal" />
           </div>
         </div>
 
@@ -711,7 +729,7 @@
         <div class="row">
           <div class="field" style="flex:1; min-width:260px;">
             <label for="mSeller">Přidat prodejce</label>
-            <input id="mSeller" type="text" placeholder="Jméno a příjmení" />
+            <input id="mSeller" type="text" />
           </div>
           <div style="display:flex; align-items:flex-end;">
             <button class="btn primary" id="mAddBtn" type="button">Přidat</button>
@@ -764,7 +782,7 @@
           </div>
           <div class="field" style="flex:1; min-width:200px;">
             <label for="tHours">Doba tréninku v hodinách</label>
-            <input id="tHours" type="text" inputmode="decimal" placeholder="1,5" />
+            <input id="tHours" type="text" inputmode="decimal" />
           </div>
         </div>
 
@@ -1126,7 +1144,8 @@
       chipSeller: document.getElementById("chipSeller"),
       chipStore: document.getElementById("chipStore"),
       chipRve: document.getElementById("chipRve"),
-      chipTrainTotal: document.getElementById("chipTrainTotal"),      chipTrainCount: document.getElementById("chipTrainCount"),
+      chipTrainTotal: document.getElementById("chipTrainTotal"),
+      chipTrainCount: document.getElementById("chipTrainCount"),
 
       avatarIni: document.getElementById("avatarIni"),
 
@@ -1232,7 +1251,8 @@
       
       const hasSeller = Boolean(els.seller.value);
       if (!hasSeller){
-        els.chipTrainTotal.textContent = "Trénink celkem 0 h";        els.chipTrainCount.textContent = "Počet tréninků 0";
+        els.chipTrainTotal.textContent = "Trénink celkem 0 h";
+        els.chipTrainCount.textContent = "Počet tréninků 0";
         return;
       }
 
@@ -1241,7 +1261,8 @@
       const count = allItems.length;
       const avg = count ? (total / count) : 0;
 
-      els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;      els.chipTrainCount.textContent = `Počet tréninků ${count}`;
+      els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
+      els.chipTrainCount.textContent = `Počet tréninků ${count}`;
 
     }
 
@@ -1882,21 +1903,3 @@ els.exportImageBtn.addEventListener("click", exportReportImage);
 </script>
 </body>
 </html>
-    /* iOS Safari: date input může vypadat jako tenký pruh dokud není focus */
-    input[type="date"]{
-      min-height:46px;
-    }
-    @supports (-webkit-touch-callout:none){
-      input[type="date"]{
-        -webkit-appearance:none;
-        appearance:none;
-      }
-      input[type="date"]::-webkit-date-and-time-value{
-        line-height:1.2;
-      }
-      input[type="date"]::-webkit-datetime-edit{
-        padding:0;
-      }
-    }
-
-
