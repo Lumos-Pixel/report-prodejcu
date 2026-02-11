@@ -360,7 +360,33 @@
       margin-right:10px;
       margin-bottom:6px;
     }
-    .trainNote{
+    
+    .trainToggle{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.84);
+      font-size:12.5px;
+      white-space:nowrap;
+      flex:0 0 auto;
+      cursor:pointer;
+      user-select:none;
+    }
+    .trainChevron{
+      width:10px;
+      height:10px;
+      display:inline-block;
+      transform:rotate(0deg);
+      transition:transform .15s ease;
+    }
+    details.trainItem[open] .trainChevron{
+      transform:rotate(180deg);
+    }
+.trainNote{
       margin-top:8px;
       color:rgba(255,255,255,.78);
       font-size:13px;
@@ -1427,8 +1453,13 @@ summary{
       }
 
       for (const t of items){
-        const wrap = document.createElement("div");
+        const hasNote = t.note && String(t.note).trim().length;
+
+        const wrap = document.createElement(hasNote ? "details" : "div");
         wrap.className = "trainItem";
+        if (hasNote){
+          wrap.setAttribute("data-has-note","1");
+        }
 
         const meta = document.createElement("div");
         meta.className = "trainMeta";
@@ -1444,13 +1475,23 @@ summary{
         meta.appendChild(pDate);
         meta.appendChild(pHours);
 
-        wrap.appendChild(meta);
+        if (hasNote){
+          const summary = document.createElement("summary");
+          summary.appendChild(meta);
 
-        if (t.note && String(t.note).trim().length){
+          const toggle = document.createElement("span");
+          toggle.className = "trainToggle";
+          toggle.innerHTML = `Poznámka <span class="trainChevron">▾</span>`;
+          summary.appendChild(toggle);
+
+          wrap.appendChild(summary);
+
           const note = document.createElement("div");
           note.className = "trainNote";
           note.textContent = String(t.note).trim();
           wrap.appendChild(note);
+        } else {
+          wrap.appendChild(meta);
         }
 
         els.trainList.appendChild(wrap);
