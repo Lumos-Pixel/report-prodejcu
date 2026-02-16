@@ -75,11 +75,32 @@
       gap:12px;
       align-items:start;
     }
-    @media (max-width:1040px){
+    
+    .reportActionsRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-top:10px;
+      flex-wrap:wrap;
+    }
+    .reportActionsRow #refreshBtn{
+      height: 44px;
+      padding: 10px 18px;
+      border-radius: 14px;
+      white-space: nowrap;
+    }
+
+
+@media (max-width:1040px){
+      .reportActionsRow{ align-items:stretch; }
+      .reportActionsRow #refreshBtn{ width:100%; }
+
       .grid{grid-template-columns:1fr}
     }
 
     .card{
+
       overflow-x:hidden;
       background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
       border:1px solid var(--stroke);
@@ -90,7 +111,9 @@
       -webkit-backdrop-filter: blur(14px);
     }
 
-    .card h2{
+    .leftCard details + details{ margin-top:10px; }
+
+.card h2{
       margin:0 0 10px;
       font-size:12.5px;
       color:var(--muted);
@@ -375,45 +398,66 @@
       align-items:center;
     }
 
-    .avatar{
-      width: 56px;
-      height: 56px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.16);
-      background:
-        radial-gradient(18px 18px at 35% 30%, rgba(255,255,255,.22), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
-      box-shadow:var(--shadowSoft);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      position:relative;
-      overflow:hidden;
-    }
-
-    .avatar svg{width:40px;height:40px;opacity:.92}
-    .avatar .ini{
-      position:absolute;
-      bottom:7px;
-      right:8px;
-      font-size:11px;
-      font-weight:800;
-      letter-spacing:.2px;
-      padding:4px 7px;
-      border-radius:999px;
-      background:rgba(0,0,0,.28);
-      border:1px solid rgba(255,255,255,.14);
-      color:rgba(255,255,255,.92);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-
-    .kpis{
+    .avatar{ width:60px; height:60px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+.avatar svg{ width:34px; height:34px; opacity:.9; }
+.avatar.hasIni svg{
+  opacity:.18;
+}
+.avatar .ini{ position:absolute; right:6px; bottom:6px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; letter-spacing:.3px; font-size:12px; color:rgba(255,255,255,.95); background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.18); text-shadow:0 1px 2px rgba(0,0,0,.45); pointer-events:none; }
+.kpis{
       display:grid;
       grid-template-columns:repeat(3, minmax(0,1fr));
       gap:10px;
     }
-    @media (max-width:740px){
+    
+    .trainRow{
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 12px 12px;
+      margin-top: 10px;
+    }
+    .trainTop{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .trainDate{
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    .trainHours{
+      font-size: 12px;
+      opacity: .8;
+      white-space: nowrap;
+    }
+    .trainMeta{
+      margin-top: 6px;
+      font-size: 12px;
+      opacity: .85;
+      line-height: 1.25;
+    }
+    .trainNote{
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.35;
+      opacity: .95;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .muted{
+      opacity: .6;
+    }
+    .emptyHint{
+      padding: 10px 0 2px 0;
+      font-size: 12px;
+      opacity: .7;
+    }
+
+
+@media (max-width:740px){
       .kpis{grid-template-columns:1fr}
     }
     .kpi{
@@ -591,6 +635,10 @@ summary{
     #tNote::placeholder{
       color:rgba(255,255,255,.55) !important;
     }
+
+/* mezera mezi přepínači v levém panelu */
+.left-subbuttons{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+
 </style>
 </head>
 
@@ -601,11 +649,14 @@ summary{
       <div class="row">
         <button class="btn" id="exportRowsBtn" type="button">Export do Excelu záznamy</button>
         <button class="btn ghost" id="exportImageBtn" type="button">Export obrázek reportu</button>
+        <button class="btn ghost" id="exportBackupBtn" type="button">Záloha dat</button>
+        <button class="btn ghost" id="importBackupBtn" type="button">Načíst zálohu</button>
+        <input id="backupFileInput" type="file" accept="application/json" style="display:none" />
       </div>
     </header>
 
     <div class="grid">
-      <div class="card">
+      <div class="card leftCard">
         <h2>Vstup dat</h2>
 
         <div class="row">
@@ -644,7 +695,7 @@ summary{
           <button class="btn ghost" id="clearBtn" type="button">Smazat všechna data</button>
         </div>
 
-        <details id="detailsRows">
+        <details id="detailsRows" class="detailsBox">
             <summary>Záznamy v období</summary>
             <div style="overflow:auto; margin-top:10px;">
               <table class="miniTable" id="tbl">
@@ -660,11 +711,16 @@ summary{
               </table>
             </div>
 
-            <div class="trainWrap">
-              <div class="trainTitle">Tréninky v období</div>
-              <div class="trainList" id="trainList"></div>
-            </div>
+            
           </details>
+
+      <details class="detailsBox">
+        <summary>Poznámky k tréninkům</summary>
+        <div class="trainWrap">
+          <div class="trainList" id="trainList"></div>
+        </div>
+      </details>
+
       </div>
 
       <div>
@@ -672,7 +728,7 @@ summary{
           <h2>Report</h2>
 
           <div class="reportTop">
-            <div class="avatar" title="Prodejce">
+            <div class="avatar" id="avatar" title="Prodejce">
               <svg viewBox="0 0 64 64" aria-hidden="true">
                 <path d="M32 34c8 0 14-6.4 14-14.3C46 11.9 39.7 6 32 6S18 11.9 18 19.7C18 27.6 24 34 32 34z" fill="rgba(255,255,255,.80)"></path>
                 <path d="M10 58c2.7-13 13-20 22-20s19.3 7 22 20" fill="rgba(255,255,255,.80)"></path>
@@ -685,8 +741,6 @@ summary{
                 <span class="chip" id="chipSeller">Vyber prodejce</span>
                 <span class="chip" id="chipStore">Prodejna</span>
                 <span class="chip" id="chipRve">RVE</span>
-
-                </span>
               </div>
             </div>
           </div>
@@ -700,14 +754,16 @@ summary{
               <label for="to">Do</label>
               <input id="to" type="date" />
             </div>
-            <button class="btn primary" id="refreshBtn" type="button">Přepočítat</button>
+            
           </div>
-          <div class="row" id="trainChipsRow" style="margin-top:10px;">
+          <div class="reportActionsRow" id="trainChipsRow">
             <span class="chipGroup" id="chipTrainGroup">
               <span class="chip" id="chipTrainTotal">Trénink celkem 0 h</span>
               <span class="chip" id="chipTrainCount">Počet tréninků 0</span>
             </span>
-          </div>
+          
+            <button class="btn primary" id="refreshBtn" type="button">Přepočítat</button>
+</div>
 
 
           <div class="hr"></div>
@@ -1285,7 +1341,9 @@ summary{
       els.avatarIni.textContent = initials(els.seller.value);
 
       
-      const hasSeller = Boolean(els.seller.value);
+      
+      els.avatar.classList.toggle('hasIni', Boolean(els.seller.value));
+const hasSeller = Boolean(els.seller.value);
       if (!hasSeller){
         els.chipTrainTotal.textContent = "Trénink celkem 0 h";
         els.chipTrainCount.textContent = "Počet tréninků 0";
@@ -1408,53 +1466,60 @@ summary{
       els.trainList.innerHTML = "";
 
       if (!sellerName || !fromD || !toD || fromD > toD){
+        els.trainList.innerHTML = '<div class="emptyHint">Vyber prodejce a rozsah dat.</div>';
         return;
       }
 
-      const items = trainingForSellerInRange(rveName, storeName, sellerName, fromD, toD)
-        .slice()
-        .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+      const list = trainings
+        .filter(t => t.rve === rveName && t.store === storeName && t.seller === sellerName)
+        .filter(t => t.date && t.date >= fromD && t.date <= toD)
+        .sort((a,b) => (a.date || '').localeCompare(b.date || ''));
 
-      if (items.length === 0){
-        const div = document.createElement("div");
-        div.className = "muted";
-        div.textContent = "V tomto období nejsou žádné tréninky.";
-        els.trainList.appendChild(div);
+      if (!list.length){
+        els.trainList.innerHTML = '<div class="emptyHint">Žádné poznámky k tréninkům v období.</div>';
         return;
       }
 
-      for (const t of items){
+      for (const t of list){
         const wrap = document.createElement("div");
-        wrap.className = "trainItem";
+        wrap.className = "trainRow";
+
+        const top = document.createElement("div");
+        top.className = "trainTop";
+
+        const dateEl = document.createElement("div");
+        dateEl.className = "trainDate";
+        dateEl.textContent = String(t.date || "").trim();
+
+        const hoursEl = document.createElement("div");
+        hoursEl.className = "trainHours";
+        if (t.hours !== undefined && t.hours !== null && String(t.hours).trim() !== ""){
+          const num = Number(String(t.hours).replace(",", "."));
+          hoursEl.textContent = (isNaN(num) ? String(t.hours).trim() : String(num).replace(".", ",")) + " h";
+        } else {
+          hoursEl.textContent = "";
+        }
+
+        top.appendChild(dateEl);
+        top.appendChild(hoursEl);
+        wrap.appendChild(top);
 
         const meta = document.createElement("div");
         meta.className = "trainMeta";
+        meta.textContent = [t.seller, t.store].filter(Boolean).join(" • ");
+        if (meta.textContent) wrap.appendChild(meta);
 
-        const pDate = document.createElement("span");
-        pDate.className = "trainPill";
-        pDate.textContent = formatDateCZ(t.date);
-
-        const pHours = document.createElement("span");
-        pHours.className = "trainPill";
-        pHours.textContent = `${formatHours(t.hours)} h`;
-
-        meta.appendChild(pDate);
-        meta.appendChild(pHours);
-
-        wrap.appendChild(meta);
-
-        if (t.note && String(t.note).trim().length){
-          const note = document.createElement("div");
-          note.className = "trainNote";
-          note.textContent = String(t.note).trim();
-          wrap.appendChild(note);
-        }
+        const noteText = (t.note || "").toString().trim();
+        const note = document.createElement("div");
+        note.className = noteText ? "trainNote" : "trainNote muted";
+        note.textContent = noteText || "Bez poznámky";
+        wrap.appendChild(note);
 
         els.trainList.appendChild(wrap);
       }
     }
 
-    let chartInstance = null;
+    
 
     function setChangeStyle(change){
       els.kpiChange.classList.remove("pos","neg","neu");
@@ -1520,7 +1585,12 @@ summary{
                 color: "rgba(255,255,255,.65)",
                 callback: (val) => `${Number(val).toFixed(0)} %`
               },
-              grid: { color: "rgba(255,255,255,.08)" }
+              grid: {
+                display: true,
+                drawBorder: false,
+                color: "rgba(255,255,255,.14)",
+                lineWidth: 1
+              }
             }
           }
         }
@@ -1930,6 +2000,84 @@ summary{
 
     els.exportRowsBtn.addEventListener("click", exportRowsCsv);
 els.exportImageBtn.addEventListener("click", exportReportImage);
+
+  // Záloha a obnova dat (pro přenos mezi zařízeními)
+  function buildBackupPayload() {
+    return {
+      app: "report-prodejcu",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        [STORAGE_KEY]: localStorage.getItem(STORAGE_KEY),
+        [LISTS_KEY]: localStorage.getItem(LISTS_KEY),
+        [TRAINING_KEY]: localStorage.getItem(TRAINING_KEY)
+      }
+    };
+  }
+
+  function downloadJson(filename, obj) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportBackup() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    downloadJson(`report-prodejcu_zaloha_${stamp}.json`, buildBackupPayload());
+  }
+
+  function importBackupFromText(jsonText) {
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (e) {
+      alert("Soubor není validní JSON.");
+      return;
+    }
+
+    if (!parsed || !parsed.data || typeof parsed.data !== "object") {
+      alert("Soubor zálohy nemá očekávaný formát.");
+      return;
+    }
+
+    // uložíme zpět jen klíčové položky
+    if (parsed.data[STORAGE_KEY] !== undefined) localStorage.setItem(STORAGE_KEY, parsed.data[STORAGE_KEY]);
+    if (parsed.data[LISTS_KEY] !== undefined) localStorage.setItem(LISTS_KEY, parsed.data[LISTS_KEY]);
+    if (parsed.data[TRAINING_KEY] !== undefined) localStorage.setItem(TRAINING_KEY, parsed.data[TRAINING_KEY]);
+
+    alert("Záloha načtena. Stránka se obnoví.");
+    location.reload();
+  }
+
+  // UI napojení
+  const exportBackupBtn = document.getElementById("exportBackupBtn");
+  const importBackupBtn = document.getElementById("importBackupBtn");
+  const backupFileInput = document.getElementById("backupFileInput");
+
+  if (exportBackupBtn) {
+    exportBackupBtn.addEventListener("click", exportBackup);
+  }
+
+  if (importBackupBtn && backupFileInput) {
+    importBackupBtn.addEventListener("click", () => backupFileInput.click());
+    backupFileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => importBackupFromText(String(reader.result || ""));
+      reader.readAsText(file, "utf-8");
+      backupFileInput.value = "";
+    });
+  }
+
 </script>
 </body>
 </html>
