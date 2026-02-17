@@ -599,6 +599,22 @@ summary{
     #tNote::placeholder{
       color:rgba(255,255,255,.55) !important;
     }
+
+/* Scroll v levém panelu aby se karta neprotahovala do nekonečna */
+#detailsRows .details-content { max-height: 260px; overflow: auto; padding-right: 6px; }
+#detailsNotes .details-content { max-height: 180px; overflow: auto; padding-right: 6px; }
+#detailsRows .details-content::-webkit-scrollbar,
+#detailsNotes .details-content::-webkit-scrollbar { width: 8px; }
+#detailsRows .details-content::-webkit-scrollbar-thumb,
+#detailsNotes .details-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+#detailsRows .details-content::-webkit-scrollbar-track,
+#detailsNotes .details-content::-webkit-scrollbar-track { background: rgba(0,0,0,0.12); border-radius: 10px; }
+
+
+/* Oddělení avatara od chipů v hlavičce reportu */
+.report-header { gap: 12px; }
+.chips { gap: 8px; flex-wrap: wrap; }
+
 </style>
 </head>
 
@@ -1177,7 +1193,7 @@ summary{
       to: document.getElementById("to"),
       refreshBtn: document.getElementById("refreshBtn"),
 
-      exportRowsBtn: document.getElementById("exportExcelBtn"),
+      exportRowsBtn: document.getElementById("exportRowsBtn"),
       exportImageBtn: document.getElementById("exportImageBtn"),
     backupBtn: document.getElementById("backupBtn"),
     loadBackupBtn: document.getElementById("loadBackupBtn"),
@@ -1219,6 +1235,8 @@ summary{
       tNote: document.getElementById("tNote"),
       saveTrainBtn: document.getElementById("saveTrainBtn")
     };
+  const safeOn = (el, ev, fn) => { if (el) el.addEventListener(ev, fn); };
+
 
     let rows = loadRows();
     let lists = loadLists();
