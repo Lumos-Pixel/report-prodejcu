@@ -650,6 +650,24 @@ summary{
   line-height: 1.35;
 }
 
+
+
+/* --- UI drobnosti: mezera u avatara, posuvník záznamů, sladění výšky --- */
+.reportTop{ gap:12px; align-items:center; }
+.avatar{ width:56px; height:56px; flex:0 0 56px; margin-right:4px; }
+.chipRow{ flex-wrap:wrap; gap:10px; }
+
+.recordsScroll{
+  overflow:auto;
+  max-height: var(--recordsMax, 360px);
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+}
+/* aby posuvník nepůsobil nalepeně */
+.recordsScroll::-webkit-scrollbar{ width:10px; }
+.recordsScroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.12); border-radius:10px; }
+.recordsScroll::-webkit-scrollbar-track{ background:transparent; }
+
 </style>
 </head>
 
@@ -708,8 +726,7 @@ summary{
 
         <details id="detailsRows">
             <summary>Přehled záznamů</summary>
-            <div style="overflow:auto; margin-top:10px;">
-              <table class="miniTable" id="tbl">
+            <div class="recordsScroll"><table class="miniTable" id="tbl">
                 <thead>
                   <tr class="muted">
                     <td>Datum</td>
@@ -1367,7 +1384,10 @@ summary{
       els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
       els.chipTrainCount.textContent = `Počet tréninků ${count}`;
 
-    }
+    
+  renderTrainingList(loadTraining());
+updateRecordsMaxHeight();
+}
 
     function setDefaultRangeIfEmpty(){
       if (els.from.value && els.to.value) return;
