@@ -253,6 +253,7 @@
       max-width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
+    }
 
     .chipGroup{
       display:inline-flex;
@@ -706,7 +707,7 @@ summary{
         </div>
 
         <details id="detailsRows">
-            <summary>Záznamy za období</summary>
+            <summary>Přehled záznamů</summary>
             <div style="overflow:auto; margin-top:10px;">
               <table class="miniTable" id="tbl">
                 <thead>
@@ -775,11 +776,11 @@ summary{
 
           <div class="kpis">
             <div class="kpi">
-              <div class="t">Aktuální období</div>
+              <div class="t">Výchozí hodnota</div>
               <div class="v" id="kpiCurrent">0 %</div>
             </div>
             <div class="kpi">
-              <div class="t">Minulé období</div>
+              <div class="t">Aktuální hodnota</div>
               <div class="v" id="kpiPrev">0 %</div>
             </div>
             <div class="kpi">
@@ -1087,7 +1088,7 @@ summary{
     function formatPct(value){
       const v = Number(value);
       if (!Number.isFinite(v)) return "0 %";
-      return `${v.toFixed(2).replace(".", ",")} %`;
+      return `${v.toFixed(1).replace(".", ",")} %`;
     }
 
     function ymd(d){
@@ -1202,7 +1203,7 @@ summary{
           r.rve,
           r.store,
           r.seller,
-          String(Number(r.value).toFixed(2)).replace(".", ",")
+          String(Number(r.value).toFixed(1)).replace(".", ",")
         ].map(csvEscape).join(";");
         lines.push(line);
       }
@@ -1444,7 +1445,7 @@ summary{
 
     function renderTable(rowsIn){
       els.tblBody.innerHTML = "";
-      const sorted = [...rowsIn].sort((a,b)=>a.date.localeCompare(b.date));
+      const sorted = [...rowsIn].sort((a,b)=>b.date.localeCompare(a.date));
       for (const r of sorted){
         const tr = document.createElement("tr");
 
@@ -1470,8 +1471,8 @@ summary{
 
 
         function renderTrainingList(rveName, storeName, sellerName, fromD, toD){
-      if (!els.trainList) return;
-      els.trainList.innerHTML = "";
+      if (!els.notesList) return;
+      els.notesList.innerHTML = "";
 
       const all = loadTraining() || [];
       const notesOnly = all.filter(t => t && typeof t.note === "string" && t.note.trim().length);
@@ -1494,7 +1495,7 @@ summary{
         });
 
       if (!filtered.length){
-        els.trainList.innerHTML = '<div class="muted" style="padding:8px 0;">Žádné poznámky v období</div>';
+        els.notesList.innerHTML = '<div class="muted" style="padding:8px 0;">Žádné poznámky v období</div>';
         return;
       }
 
@@ -1516,7 +1517,7 @@ summary{
 
         card.appendChild(meta);
         card.appendChild(txt);
-        els.trainList.appendChild(card);
+        els.notesList.appendChild(card);
       }
     }
 
@@ -1650,7 +1651,7 @@ function renderReport(){
         setChangeStyle(0);
         renderChart({ isoLabels: [], values: [] }, 0);
         els.tblBody.innerHTML = "";
-        if (els.trainList) els.trainList.innerHTML = "";
+        if (els.notesList) els.notesList.innerHTML = "";
         if (els.notesList) els.notesList.innerHTML = "<div class=\"muted\">Vyber prodejce, prodejnu a období.</div>";
         return;
       }
@@ -1664,28 +1665,50 @@ function renderReport(){
       const currentRows = rowsInRange(rveName, storeName, sellerName, fromD, toD);
       const prevRows = rowsInRange(rveName, storeName, sellerName, prevFrom, prevTo);
 
-      const currentAvg = computeAvg(currentRows);
-      const prevAvg = computeAvg(prevRows);
-      const change = computeChangePct(prevAvg, currentAvg);
+      const sortedChron = [...currentRows].sort((a,b)=>a.date.localeCompare(b.date));
+      const baselineRow = sortedChron[0] || null;
+      const currentRow = sortedChron[sortedChron.length - 1] || null;
 
-      els.kpiCurrent.textContent = formatPct(currentAvg);
+      const baselineVal = baselineRow ? Number(baselineRow.value) : NaN;
+      const currentVal = currentRow ? Number(currentRow.value) : NaN;
 
-      if(prevRows.length === 0){
-        els.kpiPrev.textContent = '—';
-        els.kpiChange.textContent = '—';
-      }else{
-        els.kpiPrev.textContent = formatPct(prevAvg);
-        els.kpiChange.textContent = formatPct(change);
+      els.kpiCurrent.textContent = isFinite(baselineVal) ? formatPct(baselineVal) : '—';
+      els.kpiPrev.textContent = isFinite(currentVal) ? formatPct(currentVal) : '—';
+
+      let change = NaN;
+      if(isFinite(baselineVal) && baselineVal !== 0 && isFinite(currentVal)){
+        change = ((currentVal - baselineVal) / baselineVal) * 100;
       }
+      els.kpiChange.textContent = isFinite(change) ? formatPct(change) : '—';
 
 const series = buildSeries(currentRows);
       renderChart(series, change);
       renderTable(currentRows);
-      renderTrainingList(rveName, storeName, sellerName, fromD, toD);
       renderTrainingNotesList(sellerName, storeName, fromD, toD);
+      adjustRowsScroll();
 
       syncChips();
     }
+
+    function adjustRowsScroll(){
+      const rowsEl = els.detailsRows;
+      const reportEl = document.getElementById('reportCard');
+      if(!rowsEl || !reportEl) return;
+
+      const rr = reportEl.getBoundingClientRect();
+      const rrows = rowsEl.getBoundingClientRect();
+
+      const available = rr.bottom - rrows.top - 16;
+      const maxH = Math.max(140, Math.min(available, 420));
+      rowsEl.style.maxHeight = maxH + 'px';
+      rowsEl.style.overflowY = 'auto';
+    }
+
+    window.addEventListener('resize', () => {
+      adjustRowsScroll();
+    });
+
+
 
     function openModal(){
       els.modalBackdrop.classList.add("show");
