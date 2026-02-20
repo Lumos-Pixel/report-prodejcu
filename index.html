@@ -639,6 +639,16 @@ summary{
 #detailsRows > div::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
 #detailsRows > div::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
 
+
+/* Poznámky: scrollbar stejný jako v "Záznamy za období" */
+.notesList{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) rgba(0,0,0,0.12);
+}
+.notesList::-webkit-scrollbar{ width: 8px; }
+.notesList::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
+.notesList::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
+
 </style>
 </head>
 
@@ -884,7 +894,9 @@ summary{
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">    // První srovnání po načtení
+    setTimeout(syncLeftPanelHeights, 0);
+</script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const STORAGE_KEY = "reportProdejcuDataV2";
@@ -1303,6 +1315,7 @@ summary{
       fillSelect(els.store, stores, preferred);
       syncSellerSelect();
       syncChips();
+      syncLeftPanelHeights();
     }
 
     function syncSellerSelect(){
@@ -1581,6 +1594,36 @@ summary{
     }
 
     
+
+
+    function syncLeftPanelHeights(){
+      const leftCard = document.querySelector(".grid > .card");
+      const reportCard = document.getElementById("reportCard");
+      const notesList = document.getElementById("notesList");
+      const rowsBox = document.querySelector("#detailsRows > div");
+      if (!leftCard || !reportCard || !notesList) return;
+
+      const reportRect = reportCard.getBoundingClientRect();
+      const targetBottom = reportRect.bottom;
+      const pad = 18;
+
+      const notesRect = notesList.getBoundingClientRect();
+      let notesMax = Math.floor(targetBottom - notesRect.top - pad);
+      if (Number.isFinite(notesMax)){
+        notesMax = Math.max(120, Math.min(380, notesMax));
+        notesList.style.maxHeight = notesMax + "px";
+      }
+
+      if (rowsBox){
+        const rowsRect = rowsBox.getBoundingClientRect();
+        let rowsMax = Math.floor(targetBottom - rowsRect.top - pad);
+        if (Number.isFinite(rowsMax)){
+          rowsMax = Math.max(160, Math.min(460, rowsMax));
+          rowsBox.style.maxHeight = rowsMax + "px";
+        }
+      }
+    }
+
 
 function renderReport(){
       setDefaultRangeIfEmpty();
@@ -2039,6 +2082,14 @@ function exportReportImage(){
     els.tHours.addEventListener("keydown", (e) => {
       if (e.key === "Enter") addTrainingEntry();
     });
+
+
+    // Srovnání výšek levého panelu s kartou REPORT (scroll do max. výšky)
+    window.addEventListener("resize", () => syncLeftPanelHeights());
+    const dRows = document.getElementById("detailsRows");
+    const dNotes = document.getElementById("detailsNotes");
+    if (dRows) dRows.addEventListener("toggle", () => setTimeout(syncLeftPanelHeights, 0));
+    if (dNotes) dNotes.addEventListener("toggle", () => setTimeout(syncLeftPanelHeights, 0));
 
 
     els.exportRowsBtn.addEventListener("click", exportRowsCsv);
