@@ -1602,40 +1602,73 @@ summary{
       const targetBottom = reportCard.getBoundingClientRect().bottom;
       const pad = 16;
 
-      const openRows = dRows.hasAttribute("open");
-      const openNotes = dNotes.hasAttribute("open");
+      const rowsOpen = dRows.hasAttribute("open");
+      const notesOpen = dNotes.hasAttribute("open");
 
-      const setMax = (boxEl) => {
-        const rect = boxEl.getBoundingClientRect();
-        let max = Math.floor(targetBottom - rect.top - pad);
-        if (!Number.isFinite(max)) return;
-        max = Math.max(120, max);
+      const rowsSummary = dRows.querySelector("summary");
+      const notesSummary = dNotes.querySelector("summary");
+      const rowsSummaryH = rowsSummary ? rowsSummary.getBoundingClientRect().height : 0;
+      const notesSummaryH = notesSummary ? notesSummary.getBoundingClientRect().height : 0;
+
+      const minBox = 60;  // aby se vždy vešlo bez přetékání, i když je málo místa
+
+      const setBoxMax = (boxEl, maxPx) => {
+        const max = Math.max(minBox, Math.floor(maxPx));
         boxEl.style.maxHeight = max + "px";
         boxEl.style.overflowY = "auto";
       };
 
-      // Když je otevřené pouze jedno, jeho obsah se zastaví nejpozději na spodní hraně karty REPORT.
-      // Když jsou otevřené obě, mohou přesáhnout (uživatel to chce), proto limit nenasazujeme.
-      if (openRows && openNotes){
-        rowsBox.style.maxHeight = "";
-        notesBox.style.maxHeight = "";
-        return;
-      }
-
-      if (openRows){
-        setMax(rowsBox);
-        notesBox.style.maxHeight = "";
-        return;
-      }
-
-      if (openNotes){
-        setMax(notesBox);
-        rowsBox.style.maxHeight = "";
-        return;
-      }
-
+      // výchozí: bez limitů, ale s přetékáním uvnitř seznamů
       rowsBox.style.maxHeight = "";
       notesBox.style.maxHeight = "";
+
+      // nic otevřeno
+      if (!rowsOpen && !notesOpen) return;
+
+      // když je otevřené jen jedno, musí se i se zavřenou druhou kartou vejít na spodek REPORT
+      if (rowsOpen && !notesOpen){
+        const top = rowsBox.getBoundingClientRect().top;
+        // rezervujeme místo na další (zavřenou) kartu Poznámky: její summary a malé odsazení
+        const reserve = notesSummaryH + 12;
+        const max = targetBottom - top - pad - reserve;
+        setBoxMax(rowsBox, max);
+        return;
+      }
+
+      if (!rowsOpen && notesOpen){
+        const top = notesBox.getBoundingClientRect().top;
+        // rezervujeme místo na zavřenou kartu Záznamy: její summary a malé odsazení
+        const reserve = rowsSummaryH + 12;
+        const max = targetBottom - top - pad - reserve;
+        setBoxMax(notesBox, max);
+        return;
+      }
+
+      // obě otevřené: obě se musí vejít do spodní hrany REPORT, výšku rozdělíme
+      // nejdřív dáme notes minimální prostor, zbytek dostanou záznamy, pak dopočítáme notes
+      const rowsTop = rowsBox.getBoundingClientRect().top;
+
+      // chceme, aby se vešlo: rowsBox + (notesSummary + notesBox) + odsazení
+      // dáme notesBox minimálně minBox, a zbytek připadne rowsBox
+      let rowsMax = targetBottom - rowsTop - pad - (notesSummaryH + 12) - minBox;
+      setBoxMax(rowsBox, rowsMax);
+
+      // po nastavení rowsBox se přepočítá pozice notesBox, teď mu dáme maximum do spodku REPORT
+      const notesTop = notesBox.getBoundingClientRect().top;
+      let notesMax = targetBottom - notesTop - pad;
+      setBoxMax(notesBox, notesMax);
+
+      // když by notesMax vyšlo menší než minBox (v extrému), vezmeme místo z rowsBox
+      const actualNotesMax = parseInt(notesBox.style.maxHeight || "0", 10) || 0;
+      if (actualNotesMax < minBox){
+        const deficit = minBox - actualNotesMax;
+        const actualRowsMax = parseInt(rowsBox.style.maxHeight || "0", 10) || 0;
+        setBoxMax(rowsBox, Math.max(minBox, actualRowsMax - deficit));
+        // znovu dopočítat notes
+        const notesTop2 = notesBox.getBoundingClientRect().top;
+        notesMax = targetBottom - notesTop2 - pad;
+        setBoxMax(notesBox, notesMax);
+      }
     }
 
 
