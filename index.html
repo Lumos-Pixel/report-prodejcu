@@ -253,7 +253,6 @@
       max-width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
-    }
 
     .chipGroup{
       display:inline-flex;
@@ -279,6 +278,28 @@
       .chipGroup{ width:100%; }
       .chipGroup .chip{ flex:1 1 auto; }
     }
+
+    /* iOS Safari: date input může vypadat jako tenký pruh dokud není focus */
+    input[type="date"]{
+      min-height:46px;
+      height:46px;
+      padding-top:0;
+      padding-bottom:0;
+      line-height:46px;
+    }
+    @supports (-webkit-touch-callout:none){
+      input[type="date"]{
+        -webkit-appearance:none;
+        appearance:none;
+      }
+      input[type="date"]::-webkit-date-and-time-value{
+        line-height:46px;
+      }
+    }
+
+    /* Skrytí nápověd v polích (placeholder), necháváme jen textarea Poznámka */
+    input::placeholder{ color: transparent; }
+    textarea::placeholder{ color: rgba(244,246,251,.55); }
 
     .chipGroup .chip{
       box-shadow:none;
@@ -346,7 +367,7 @@
       line-height:1.45;
       white-space:pre-wrap;
     }
-
+    }
 
     .reportTop{display:flex; gap:14px; align-items:center;}
   .chipsRow{display:flex; flex-wrap:wrap; gap:10px; min-width:0;}
@@ -360,8 +381,8 @@
 
 
     .avatar{
-      width: 64px;
-      height: 64px;
+      width: 56px;
+      height: 56px;
       border-radius:18px;
       border:1px solid rgba(255,255,255,.16);
       background:
@@ -375,7 +396,7 @@
       overflow:hidden;
     }
 
-    .avatar svg{width:44px;height:44px;opacity:.92}
+    .avatar svg{width:40px;height:40px;opacity:.92}
     .avatar .ini{
       position:absolute;
       bottom:7px;
@@ -629,24 +650,36 @@ summary{
 }
 
 
-/* Záznamy za období: vnitřní scroll, max výšku řídí JS podle spodku karty REPORT */
-#detailsRows > div{
-  overflow-y: auto;
-  padding-right: 6px;
+/* --- Mobil: report hlavička a datumové řádky nesmí přetékat mimo obrazovku --- */
+@media (max-width:520px){
+  .reportTop{flex-direction:column; align-items:flex-start;}
+  .reportTop .avatar{margin-bottom:6px;}
+  .chipsRow{width:100%;}
+  #refreshBtn{width:100%; align-self:stretch;}
 }
-#detailsRows > div::-webkit-scrollbar{ width: 8px; }
-#detailsRows > div::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
-#detailsRows > div::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
 
-
-/* Poznámky: scrollbar stejný jako v "Záznamy za období" */
-.notesList{
-  overflow-y: auto;
-  padding-right: 6px;
+/* --- Details (Záznamy, Poznámky): plynulé rozbalení bez "bliknutí" + vnitřní scroll --- */
+#detailsRows, #detailsNotes{ overflow:hidden; }
+#detailsRows .details-content,
+#detailsNotes .details-content{
+  max-height:0;
+  overflow:auto;
+  padding-right:6px;
+  transition:max-height .22s ease;
+  will-change:max-height;
 }
-.notesList::-webkit-scrollbar{ width: 8px; }
-.notesList::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
-.notesList::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
+#detailsRows[open] .details-content,
+#detailsNotes[open] .details-content{
+  max-height: var(--details-max, 60vh);
+}
+
+/* sjednocený scrollbar pro obě sekce */
+#detailsRows .details-content::-webkit-scrollbar,
+#detailsNotes .details-content::-webkit-scrollbar{ width:8px; }
+#detailsRows .details-content::-webkit-scrollbar-thumb,
+#detailsNotes .details-content::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
+#detailsRows .details-content::-webkit-scrollbar-track,
+#detailsNotes .details-content::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
 
 </style>
 </head>
@@ -706,11 +739,13 @@ summary{
 
         <details id="detailsRows">
             <summary>Záznamy za období</summary>
-            <div style="overflow:auto; margin-top:10px;">
+            <div class="details-content" style="overflow:auto; margin-top:10px;">
               <table class="miniTable" id="tbl">
                 <thead>
                   <tr class="muted">
                     <td>Datum</td>
+                    <td>Prodejce</td>
+                    <td>Prodejna</td>
                     <td>Hodnota</td>
                   </tr>
                 </thead>
@@ -722,7 +757,7 @@ summary{
 
             <details id="detailsNotes" class="details">
               <summary>Poznámky k tréninkům</summary>
-              <div class="notesList" id="notesList"></div>
+              <div class="notesList details-content" id="notesList"></div>
             </details>
       </div>
 
@@ -772,11 +807,11 @@ summary{
 
           <div class="kpis">
             <div class="kpi">
-              <div class="t">Výchozí hodnota</div>
+              <div class="t">Aktuální období</div>
               <div class="v" id="kpiCurrent">0 %</div>
             </div>
             <div class="kpi">
-              <div class="t">Aktuální hodnota</div>
+              <div class="t">Minulé období</div>
               <div class="v" id="kpiPrev">0 %</div>
             </div>
             <div class="kpi">
@@ -893,9 +928,7 @@ summary{
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">    // První srovnání po načtení
-    setTimeout(syncLeftPanelHeights, 0);
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const STORAGE_KEY = "reportProdejcuDataV2";
@@ -1085,8 +1118,8 @@ summary{
 
     function formatPct(value){
       const v = Number(value);
-      if (!Number.isFinite(v)) return "—";
-      return `${v.toFixed(1).replace(".", ",")} %`;
+      if (!Number.isFinite(v)) return "0 %";
+      return `${v.toFixed(2).replace(".", ",")} %`;
     }
 
     function ymd(d){
@@ -1129,13 +1162,6 @@ summary{
       if (prev === 0) return 100;
       return ((current - prev) / prev) * 100;
     }
-
-    function computeRelativeChange(base, current){
-      if (!Number.isFinite(base) || !Number.isFinite(current)) return null;
-      if (base === 0) return null;
-      return ((current - base) / base) * 100;
-    }
-
 
     function initials(name){
       const n = normText(name);
@@ -1314,7 +1340,6 @@ summary{
       fillSelect(els.store, stores, preferred);
       syncSellerSelect();
       syncChips();
-      syncLeftPanelHeights();
     }
 
     function syncSellerSelect(){
@@ -1451,7 +1476,7 @@ summary{
 
     function renderTable(rowsIn){
       els.tblBody.innerHTML = "";
-      const sorted = [...rowsIn].sort((a,b)=>b.date.localeCompare(a.date));
+      const sorted = [...rowsIn].sort((a,b)=>a.date.localeCompare(b.date));
       for (const r of sorted){
         const tr = document.createElement("tr");
 
@@ -1459,10 +1484,18 @@ summary{
         td1.textContent = formatDateCZ(r.date);
 
         const td2 = document.createElement("td");
-        td2.textContent = formatPct(r.value);
+        td2.textContent = r.seller;
+
+        const td3 = document.createElement("td");
+        td3.textContent = r.store;
+
+        const td4 = document.createElement("td");
+        td4.textContent = formatPct(r.value);
 
         tr.appendChild(td1);
         tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
         els.tblBody.appendChild(tr);
       }
     }
@@ -1480,16 +1513,16 @@ summary{
         .filter(t => !storeName || t.store === storeName)
         .filter(t => !sellerName || t.seller === sellerName)
         .filter(t => {
-          const d = parseDateISO(t.date);
+          const d = parseDate(t.date);
           if (!d) return false;
           if (fromD && d < fromD) return false;
           if (toD && d > toD) return false;
           return true;
         })
         .sort((a,b) => {
-          const da = parseDateISO(a.date) || 0;
-          const db = parseDateISO(b.date) || 0;
-          return db - da;
+          const da = parseDate(a.date) || 0;
+          const db = parseDate(b.date) || 0;
+          return da - db;
         });
 
       if (!filtered.length){
@@ -1503,7 +1536,11 @@ summary{
 
         const meta = document.createElement("div");
         meta.className = "noteMeta";
-        meta.textContent = t.date ? formatDateCZ(t.date) : "—";
+        const parts = [];
+        if (t.date) parts.push(t.date);
+        if (t.seller) parts.push(t.seller);
+        if (t.store) parts.push(t.store);
+        meta.textContent = parts.join(" • ");
 
         const txt = document.createElement("div");
         txt.className = "noteText";
@@ -1589,55 +1626,42 @@ summary{
     }
 
     
+function renderTrainingNotesList(prodejceName, prodejnaName, fromDateStr, toDateStr){
+  const list = els.notesList;
+  if(!list) return;
 
+  list.innerHTML = '';
 
-    function syncLeftPanelHeights(){
-      const reportCard = document.getElementById("reportCard");
-      const dRows = document.getElementById("detailsRows");
-      const dNotes = document.getElementById("detailsNotes");
-      const rowsBox = document.querySelector("#detailsRows > div");
-      const notesBox = document.getElementById("notesList");
-      if (!reportCard || !dRows || !dNotes || !rowsBox || !notesBox) return;
+  if(!prodejceName || !prodejnaName || !fromDateStr || !toDateStr){
+    list.innerHTML = '<div class="muted">Vyber prodejce, prodejnu a období.</div>';
+    return;
+  }
 
-      const targetBottom = reportCard.getBoundingClientRect().bottom;
-      const pad = 16;
+  const fromTs = new Date(fromDateStr + 'T00:00:00').getTime();
+  const toTs = new Date(toDateStr + 'T23:59:59').getTime();
 
-      const openRows = dRows.hasAttribute("open");
-      const openNotes = dNotes.hasAttribute("open");
+  const trainings = loadTrainings()
+    .filter(t => t.prodejceName === prodejceName && t.prodejnaName === prodejnaName)
+    .filter(t => t.ts >= fromTs && t.ts <= toTs)
+    .filter(t => (t.note || '').trim().length > 0)
+    .sort((a,b) => b.ts - a.ts);
 
-      const setMax = (boxEl) => {
-        const rect = boxEl.getBoundingClientRect();
-        let max = Math.floor(targetBottom - rect.top - pad);
-        if (!Number.isFinite(max)) return;
-        max = Math.max(120, max);
-        boxEl.style.maxHeight = max + "px";
-        boxEl.style.overflowY = "auto";
-      };
+  if(trainings.length === 0){
+    list.innerHTML = '<div class="muted">Žádné poznámky v období.</div>';
+    return;
+  }
 
-      // Když je otevřené pouze jedno, jeho obsah se zastaví nejpozději na spodní hraně karty REPORT.
-      // Když jsou otevřené obě, mohou přesáhnout (uživatel to chce), proto limit nenasazujeme.
-      if (openRows && openNotes){
-        rowsBox.style.maxHeight = "";
-        notesBox.style.maxHeight = "";
-        return;
-      }
-
-      if (openRows){
-        setMax(rowsBox);
-        notesBox.style.maxHeight = "";
-        return;
-      }
-
-      if (openNotes){
-        setMax(notesBox);
-        rowsBox.style.maxHeight = "";
-        return;
-      }
-
-      rowsBox.style.maxHeight = "";
-      notesBox.style.maxHeight = "";
-    }
-
+  trainings.forEach(t => {
+    const d = new Date(t.ts);
+    const dateStr = d.toLocaleDateString('cs-CZ');
+    const timeStr = d.toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit'});
+    const meta = `${dateStr} ${timeStr}` + (t.hours ? `, ${t.hours} h` : '');
+    const item = document.createElement('div');
+    item.className = 'noteItem';
+    item.innerHTML = `<div class="noteMeta">${escapeHtml(meta)}</div><div class="noteText">${escapeHtml((t.note||'').trim())}</div>`;
+    list.appendChild(item);
+  });
+}
 
 function renderReport(){
       setDefaultRangeIfEmpty();
@@ -1651,10 +1675,10 @@ function renderReport(){
       if (!fromD || !toD || fromD > toD) return;
 
       if (!sellerName){
-        els.kpiCurrent.textContent = "—";
+        els.kpiCurrent.textContent = "0,0 %";
         if (els.notesList) els.notesList.innerHTML = '<div class="muted">Vyber prodejce.</div>';
-        els.kpiPrev.textContent = "—";
-        els.kpiChange.textContent = "—";
+        els.kpiPrev.textContent = "0 %";
+        els.kpiChange.textContent = "0 %";
         setChangeStyle(0);
         renderChart({ isoLabels: [], values: [] }, 0);
         els.tblBody.innerHTML = "";
@@ -1663,26 +1687,34 @@ function renderReport(){
         return;
       }
 
+      const lenDays = daysBetweenInclusive(fromD, toD);
+      const prevTo = new Date(fromD);
+      prevTo.setDate(prevTo.getDate() - 1);
+      const prevFrom = new Date(prevTo);
+      prevFrom.setDate(prevFrom.getDate() - (lenDays - 1));
+
       const currentRows = rowsInRange(rveName, storeName, sellerName, fromD, toD);
+      const prevRows = rowsInRange(rveName, storeName, sellerName, prevFrom, prevTo);
 
-      let baseVal = null;
-      let lastVal = null;
-      if (currentRows.length){
-        const byDate = [...currentRows].sort((a,b)=>a.date.localeCompare(b.date));
-        baseVal = Number(byDate[0].value);
-        lastVal = Number(byDate[byDate.length-1].value);
+      const currentAvg = computeAvg(currentRows);
+      const prevAvg = computeAvg(prevRows);
+      const change = computeChangePct(prevAvg, currentAvg);
+
+      els.kpiCurrent.textContent = formatPct(currentAvg);
+
+      if(prevRows.length === 0){
+        els.kpiPrev.textContent = '—';
+        els.kpiChange.textContent = '—';
+      }else{
+        els.kpiPrev.textContent = formatPct(prevAvg);
+        els.kpiChange.textContent = formatPct(change);
       }
-      const change = computeRelativeChange(baseVal, lastVal);
-
-      els.kpiCurrent.textContent = formatPct(baseVal);
-      els.kpiPrev.textContent = formatPct(lastVal);
-      els.kpiChange.textContent = (change === null) ? "—" : formatPct(change);
-      setChangeStyle(change === null ? 0 : change);
 
 const series = buildSeries(currentRows);
-      renderChart(series, change === null ? 0 : change);
+      renderChart(series, change);
       renderTable(currentRows);
       renderTrainingList(rveName, storeName, sellerName, fromD, toD);
+      renderTrainingNotesList(sellerName, storeName, fromD, toD);
 
       syncChips();
     }
@@ -2098,14 +2130,6 @@ function exportReportImage(){
     });
 
 
-    // Srovnání výšek levého panelu s kartou REPORT (scroll do max. výšky)
-    window.addEventListener("resize", () => syncLeftPanelHeights());
-    const dRows = document.getElementById("detailsRows");
-    const dNotes = document.getElementById("detailsNotes");
-    if (dRows) dRows.addEventListener("toggle", () => setTimeout(syncLeftPanelHeights, 0));
-    if (dNotes) dNotes.addEventListener("toggle", () => setTimeout(syncLeftPanelHeights, 0));
-
-
     els.exportRowsBtn.addEventListener("click", exportRowsCsv);
 els.exportImageBtn.addEventListener("click", exportReportImage);
 
@@ -2118,5 +2142,71 @@ els.exportImageBtn.addEventListener("click", exportReportImage);
       e.target.value = "";
     });
 </script>
+
+
+  <script>
+  (function(){
+    const dRows = document.getElementById("detailsRows");
+    const dNotes = document.getElementById("detailsNotes");
+    const rowsBox = dRows ? dRows.querySelector(".details-content") : null;
+    const notesBox = dNotes ? dNotes.querySelector(".details-content") : null;
+    if (!dRows || !dNotes || !rowsBox || !notesBox) return;
+
+    const pad = 16;
+    const minH = 140;
+
+    function viewportBottom(){
+      const vv = window.visualViewport;
+      return vv ? (vv.height + vv.offsetTop) : window.innerHeight;
+    }
+
+    function setMax(detailsEl, boxEl){
+      const bottom = viewportBottom();
+      const rect = boxEl.getBoundingClientRect();
+      let max = Math.floor(bottom - rect.top - pad);
+      if (!Number.isFinite(max)) return;
+      max = Math.max(minH, max);
+      detailsEl.style.setProperty("--details-max", max + "px");
+    }
+
+    function update(){
+      requestAnimationFrame(() => {
+        if (dRows.open) setMax(dRows, rowsBox);
+        if (dNotes.open) setMax(dNotes, notesBox);
+      });
+    }
+
+    function wire(detailsEl){
+      const sum = detailsEl.querySelector("summary");
+      if (!sum) return;
+
+      sum.addEventListener("click", (e) => {
+        e.preventDefault();
+        const willOpen = !detailsEl.open;
+
+        if (willOpen){
+          detailsEl.open = true;
+          update();
+        } else {
+          detailsEl.open = false;
+        }
+      });
+    }
+
+    wire(dRows);
+    wire(dNotes);
+
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    if (window.visualViewport){
+      window.visualViewport.addEventListener("resize", update);
+      window.visualViewport.addEventListener("scroll", update);
+    }
+
+    // první srovnání po načtení
+    update();
+  })();
+  </script>
+
 </body>
 </html>
