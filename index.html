@@ -371,7 +371,7 @@
     }
 
     .reportTop{display:flex; gap:14px; align-items:center;}
-  .chipsRow{display:flex; flex-wrap:wrap; gap:10px; min-width:0;}
+  .chipsRow{display:flex; flex-wrap:wrap; gap:10px; min-width:0; margin-left:6px;}
   .chipsRow .chip{max-width:100%;}
   .reportTop .avatar{flex:0 0 auto;}
   #refreshBtn{height:46px; align-self:flex-end;}
@@ -602,7 +602,7 @@ summary{
     }
 
 /* Scroll v levém panelu aby se karta neprotahovala do nekonečna */
-#detailsRows .details-content { max-height: 260px; overflow: auto; padding-right: 6px; }
+#detailsRows .details-content { max-height: 360px; overflow: auto; padding-right: 6px; }
 #detailsNotes .details-content { max-height: 180px; overflow: auto; padding-right: 6px; }
 #detailsRows .details-content::-webkit-scrollbar,
 #detailsNotes .details-content::-webkit-scrollbar { width: 8px; }
@@ -649,24 +649,6 @@ summary{
   white-space: pre-wrap;
   line-height: 1.35;
 }
-
-
-
-/* --- UI drobnosti: mezera u avatara, posuvník záznamů, sladění výšky --- */
-.reportTop{ gap:12px; align-items:center; }
-.avatar{ width:56px; height:56px; flex:0 0 56px; margin-right:4px; }
-.chipRow{ flex-wrap:wrap; gap:10px; }
-
-.recordsScroll{
-  overflow:auto;
-  max-height: var(--recordsMax, 360px);
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.08);
-}
-/* aby posuvník nepůsobil nalepeně */
-.recordsScroll::-webkit-scrollbar{ width:10px; }
-.recordsScroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.12); border-radius:10px; }
-.recordsScroll::-webkit-scrollbar-track{ background:transparent; }
 
 </style>
 </head>
@@ -725,8 +707,9 @@ summary{
         </div>
 
         <details id="detailsRows">
-            <summary>Přehled záznamů</summary>
-            <div class="recordsScroll"><table class="miniTable" id="tbl">
+            <summary>Záznamy za období</summary>
+            <div class="details-content">
+              <table class="miniTable" id="tbl">
                 <thead>
                   <tr class="muted">
                     <td>Datum</td>
@@ -1131,6 +1114,16 @@ summary{
       return `${m[3]}.${m[2]}.${m[1]}`;
     }
 
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+
     function daysBetweenInclusive(from, to){
       const ms = 24*60*60*1000;
       return Math.round((to - from) / ms) + 1;
@@ -1220,7 +1213,7 @@ summary{
           r.rve,
           r.store,
           r.seller,
-          String(Number(r.value).toFixed(1)).replace(".", ",")
+          String(Number(r.value).toFixed(2)).replace(".", ",")
         ].map(csvEscape).join(";");
         lines.push(line);
       }
@@ -1384,10 +1377,7 @@ summary{
       els.chipTrainTotal.textContent = `Trénink celkem ${formatHours(total)} h`;
       els.chipTrainCount.textContent = `Počet tréninků ${count}`;
 
-    
-  renderTrainingList(loadTraining());
-updateRecordsMaxHeight();
-}
+    }
 
     function setDefaultRangeIfEmpty(){
       if (els.from.value && els.to.value) return;
@@ -1465,7 +1455,7 @@ updateRecordsMaxHeight();
 
     function renderTable(rowsIn){
       els.tblBody.innerHTML = "";
-      const sorted = [...rowsIn].sort((a,b)=>b.date.localeCompare(a.date));
+      const sorted = [...rowsIn].sort((a,b)=>a.date.localeCompare(b.date));
       for (const r of sorted){
         const tr = document.createElement("tr");
 
@@ -1491,8 +1481,8 @@ updateRecordsMaxHeight();
 
 
         function renderTrainingList(rveName, storeName, sellerName, fromD, toD){
-      if (!els.notesList) return;
-      els.notesList.innerHTML = "";
+      if (!els.trainList) return;
+      els.trainList.innerHTML = "";
 
       const all = loadTraining() || [];
       const notesOnly = all.filter(t => t && typeof t.note === "string" && t.note.trim().length);
@@ -1515,7 +1505,7 @@ updateRecordsMaxHeight();
         });
 
       if (!filtered.length){
-        els.notesList.innerHTML = '<div class="muted" style="padding:8px 0;">Žádné poznámky v období</div>';
+        els.trainList.innerHTML = '<div class="muted" style="padding:8px 0;">Žádné poznámky v období</div>';
         return;
       }
 
@@ -1537,7 +1527,7 @@ updateRecordsMaxHeight();
 
         card.appendChild(meta);
         card.appendChild(txt);
-        els.notesList.appendChild(card);
+        els.trainList.appendChild(card);
       }
     }
 
@@ -1671,64 +1661,47 @@ function renderReport(){
         setChangeStyle(0);
         renderChart({ isoLabels: [], values: [] }, 0);
         els.tblBody.innerHTML = "";
-        if (els.notesList) els.notesList.innerHTML = "";
+        if (els.trainList) els.trainList.innerHTML = "";
         if (els.notesList) els.notesList.innerHTML = "<div class=\"muted\">Vyber prodejce, prodejnu a období.</div>";
         return;
       }
 
-      const lenDays = daysBetweenInclusive(fromD, toD);
-      const prevTo = new Date(fromD);
-      prevTo.setDate(prevTo.getDate() - 1);
-      const prevFrom = new Date(prevTo);
-      prevFrom.setDate(prevFrom.getDate() - (lenDays - 1));
-
       const currentRows = rowsInRange(rveName, storeName, sellerName, fromD, toD);
-      const prevRows = rowsInRange(rveName, storeName, sellerName, prevFrom, prevTo);
 
-      const sortedChron = [...currentRows].sort((a,b)=>a.date.localeCompare(b.date));
-      const baselineRow = sortedChron[0] || null;
-      const currentRow = sortedChron[sortedChron.length - 1] || null;
+// řazení pro graf: od nejstaršího po nejnovější
+const series = currentRows
+  .slice()
+  .sort((a,b)=> parseDateISO(a.dateISO) - parseDateISO(b.dateISO))
+  .map(r=>({ x: formatDateCZ(r.dateISO), y: Number(r.valuePct) }));
 
-      const baselineVal = baselineRow ? Number(baselineRow.value) : NaN;
-      const currentVal = currentRow ? Number(currentRow.value) : NaN;
+let base = 0;
+let current = 0;
+let change = 0;
 
-      els.kpiCurrent.textContent = isFinite(baselineVal) ? formatPct(baselineVal) : '—';
-      els.kpiPrev.textContent = isFinite(currentVal) ? formatPct(currentVal) : '—';
+if(series.length){
+  base = series[0].y;
+  current = series[series.length - 1].y;
 
-      let change = NaN;
-      if(isFinite(baselineVal) && baselineVal !== 0 && isFinite(currentVal)){
-        change = ((currentVal - baselineVal) / baselineVal) * 100;
-      }
-      els.kpiChange.textContent = isFinite(change) ? formatPct(change) : '—';
+  if(base === 0){
+    change = current === 0 ? 0 : 100;
+  } else {
+    change = ((current - base) / base) * 100;
+  }
+}
 
-const series = buildSeries(currentRows);
-      renderChart(series, change);
+els.kpiCurrent.textContent = formatPct(base);   // Výchozí hodnota
+els.kpiPrev.textContent = formatPct(current);   // Aktuální hodnota
+els.kpiChange.textContent = formatPct(change);
+
+renderTable(currentRows); // tabulka chceme od nejnovějšího
+renderTrainingSummary(rveName, storeName, sellerName, fromD, toD);
+renderChart(series, change);
       renderTable(currentRows);
+      renderTrainingList(rveName, storeName, sellerName, fromD, toD);
       renderTrainingNotesList(sellerName, storeName, fromD, toD);
-      adjustRowsScroll();
 
       syncChips();
     }
-
-    function adjustRowsScroll(){
-      const rowsEl = els.detailsRows;
-      const reportEl = document.getElementById('reportCard');
-      if(!rowsEl || !reportEl) return;
-
-      const rr = reportEl.getBoundingClientRect();
-      const rrows = rowsEl.getBoundingClientRect();
-
-      const available = rr.bottom - rrows.top - 16;
-      const maxH = Math.max(140, Math.min(available, 420));
-      rowsEl.style.maxHeight = maxH + 'px';
-      rowsEl.style.overflowY = 'auto';
-    }
-
-    window.addEventListener('resize', () => {
-      adjustRowsScroll();
-    });
-
-
 
     function openModal(){
       els.modalBackdrop.classList.add("show");
