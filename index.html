@@ -629,24 +629,15 @@ summary{
 }
 
 
-/* Záznamy za období: vnitřní scroll, max výšku řídí JS podle spodku karty REPORT */
+/* Záznamy za období: držet výšku v úrovni grafu a použít vnitřní scroll */
 #detailsRows > div{
+  max-height: 340px;
   overflow-y: auto;
   padding-right: 6px;
 }
 #detailsRows > div::-webkit-scrollbar{ width: 8px; }
 #detailsRows > div::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
 #detailsRows > div::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
-
-
-/* Poznámky: scrollbar stejný jako v "Záznamy za období" */
-.notesList{
-  overflow-y: auto;
-  padding-right: 6px;
-}
-.notesList::-webkit-scrollbar{ width: 8px; }
-.notesList::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius: 10px; }
-.notesList::-webkit-scrollbar-track{ background: rgba(0,0,0,0.12); border-radius: 10px; }
 
 </style>
 </head>
@@ -893,9 +884,7 @@ summary{
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">    // První srovnání po načtení
-    setTimeout(syncLeftPanelHeights, 0);
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const STORAGE_KEY = "reportProdejcuDataV2";
@@ -1314,7 +1303,6 @@ summary{
       fillSelect(els.store, stores, preferred);
       syncSellerSelect();
       syncChips();
-      syncLeftPanelHeights();
     }
 
     function syncSellerSelect(){
@@ -1503,7 +1491,11 @@ summary{
 
         const meta = document.createElement("div");
         meta.className = "noteMeta";
-        meta.textContent = t.date ? formatDateCZ(t.date) : "—";
+        const parts = [];
+        if (t.date) parts.push(formatDateCZ(t.date));
+        if (t.seller) parts.push(t.seller);
+        if (t.store) parts.push(t.store);
+        meta.textContent = parts.join(" • ");
 
         const txt = document.createElement("div");
         txt.className = "noteText";
@@ -1589,88 +1581,6 @@ summary{
     }
 
     
-
-
-    function syncLeftPanelHeights(){
-      const reportCard = document.getElementById("reportCard");
-      const dRows = document.getElementById("detailsRows");
-      const dNotes = document.getElementById("detailsNotes");
-      const rowsBox = document.querySelector("#detailsRows > div");
-      const notesBox = document.getElementById("notesList");
-      if (!reportCard || !dRows || !dNotes || !rowsBox || !notesBox) return;
-
-      const targetBottom = reportCard.getBoundingClientRect().bottom;
-      const pad = 16;
-
-      const rowsOpen = dRows.hasAttribute("open");
-      const notesOpen = dNotes.hasAttribute("open");
-
-      const rowsSummary = dRows.querySelector("summary");
-      const notesSummary = dNotes.querySelector("summary");
-      const rowsSummaryH = rowsSummary ? rowsSummary.getBoundingClientRect().height : 0;
-      const notesSummaryH = notesSummary ? notesSummary.getBoundingClientRect().height : 0;
-
-      const minBox = 60;  // aby se vždy vešlo bez přetékání, i když je málo místa
-
-      const setBoxMax = (boxEl, maxPx) => {
-        const max = Math.max(minBox, Math.floor(maxPx));
-        boxEl.style.maxHeight = max + "px";
-        boxEl.style.overflowY = "auto";
-      };
-
-      // výchozí: bez limitů, ale s přetékáním uvnitř seznamů
-      rowsBox.style.maxHeight = "";
-      notesBox.style.maxHeight = "";
-
-      // nic otevřeno
-      if (!rowsOpen && !notesOpen) return;
-
-      // když je otevřené jen jedno, musí se i se zavřenou druhou kartou vejít na spodek REPORT
-      if (rowsOpen && !notesOpen){
-        const top = rowsBox.getBoundingClientRect().top;
-        // rezervujeme místo na další (zavřenou) kartu Poznámky: její summary a malé odsazení
-        const reserve = notesSummaryH + 12;
-        const max = targetBottom - top - pad - reserve;
-        setBoxMax(rowsBox, max);
-        return;
-      }
-
-      if (!rowsOpen && notesOpen){
-        const top = notesBox.getBoundingClientRect().top;
-        // rezervujeme místo na zavřenou kartu Záznamy: její summary a malé odsazení
-        const reserve = rowsSummaryH + 12;
-        const max = targetBottom - top - pad - reserve;
-        setBoxMax(notesBox, max);
-        return;
-      }
-
-      // obě otevřené: obě se musí vejít do spodní hrany REPORT, výšku rozdělíme
-      // nejdřív dáme notes minimální prostor, zbytek dostanou záznamy, pak dopočítáme notes
-      const rowsTop = rowsBox.getBoundingClientRect().top;
-
-      // chceme, aby se vešlo: rowsBox + (notesSummary + notesBox) + odsazení
-      // dáme notesBox minimálně minBox, a zbytek připadne rowsBox
-      let rowsMax = targetBottom - rowsTop - pad - (notesSummaryH + 12) - minBox;
-      setBoxMax(rowsBox, rowsMax);
-
-      // po nastavení rowsBox se přepočítá pozice notesBox, teď mu dáme maximum do spodku REPORT
-      const notesTop = notesBox.getBoundingClientRect().top;
-      let notesMax = targetBottom - notesTop - pad;
-      setBoxMax(notesBox, notesMax);
-
-      // když by notesMax vyšlo menší než minBox (v extrému), vezmeme místo z rowsBox
-      const actualNotesMax = parseInt(notesBox.style.maxHeight || "0", 10) || 0;
-      if (actualNotesMax < minBox){
-        const deficit = minBox - actualNotesMax;
-        const actualRowsMax = parseInt(rowsBox.style.maxHeight || "0", 10) || 0;
-        setBoxMax(rowsBox, Math.max(minBox, actualRowsMax - deficit));
-        // znovu dopočítat notes
-        const notesTop2 = notesBox.getBoundingClientRect().top;
-        notesMax = targetBottom - notesTop2 - pad;
-        setBoxMax(notesBox, notesMax);
-      }
-    }
-
 
 function renderReport(){
       setDefaultRangeIfEmpty();
@@ -2129,14 +2039,6 @@ function exportReportImage(){
     els.tHours.addEventListener("keydown", (e) => {
       if (e.key === "Enter") addTrainingEntry();
     });
-
-
-    // Srovnání výšek levého panelu s kartou REPORT (scroll do max. výšky)
-    window.addEventListener("resize", () => syncLeftPanelHeights());
-    const dRows = document.getElementById("detailsRows");
-    const dNotes = document.getElementById("detailsNotes");
-    if (dRows) dRows.addEventListener("toggle", () => setTimeout(syncLeftPanelHeights, 0));
-    if (dNotes) dNotes.addEventListener("toggle", () => setTimeout(syncLeftPanelHeights, 0));
 
 
     els.exportRowsBtn.addEventListener("click", exportRowsCsv);
